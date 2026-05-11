@@ -2,7 +2,7 @@ use super::style::{
     highlight_history_target, pressed_entry_button_style, transparent_entry_button_style,
     transparent_icon_button_style,
 };
-use super::summary::summarize_one_line;
+use super::summary::{summarize_one_line, summarize_one_line_with_limit};
 use crate::app::model::{FocusPart, HistoryItem};
 use crate::app::{AppModel, Message, icons};
 use crate::fl;
@@ -17,9 +17,30 @@ pub(super) fn history_row<'a>(
     idx: usize,
     item: &'a HistoryItem,
 ) -> Element<'a, Message> {
+    const TEXT_EXPANDED_MAX_CHARS: usize = 150;
+    const IMAGE_PREVIEW_COLLAPSED_HEIGHT: f32 = 120.0;
+    const IMAGE_PREVIEW_EXPANDED_HEIGHT: f32 = 240.0;
+
+    let row_is_active = app
+        .hovered_focus
+        .is_some_and(|(focus_idx, _)| focus_idx == idx)
+        || app
+            .keyboard_focus
+            .is_some_and(|(focus_idx, _)| focus_idx == idx);
+    let row_alignment = if matches!(&item.entry, clipboard::ClipboardEntry::Image { .. }) {
+        Alignment::Start
+    } else {
+        Alignment::Center
+    };
+
     let label: Element<'_, Message> = match &item.entry {
         clipboard::ClipboardEntry::Text(text) => {
-            widget::text::body(summarize_one_line(text)).into()
+            let summary = if row_is_active {
+                summarize_one_line_with_limit(text, TEXT_EXPANDED_MAX_CHARS)
+            } else {
+                summarize_one_line(text)
+            };
+            widget::text::body(summary).into()
         }
         clipboard::ClipboardEntry::Image {
             mime,
@@ -27,11 +48,25 @@ pub(super) fn history_row<'a>(
             thumbnail_png,
             ..
         } => {
-            let thumb = thumbnail_png.as_ref().map(|png| {
-                widget::image(ImageHandle::from_bytes(png.clone()))
-                    .width(Length::Fill)
-                    .height(Length::Fixed(240.0))
-                    .content_fit(cosmic::iced::ContentFit::Contain)
+            let thumb: Option<Element<'_, Message>> = thumbnail_png.as_ref().map(|png| {
+                let preview_height = if row_is_active {
+                    IMAGE_PREVIEW_EXPANDED_HEIGHT
+                } else {
+                    IMAGE_PREVIEW_COLLAPSED_HEIGHT
+                };
+
+                widget::container(
+                    widget::image::<ImageHandle>(ImageHandle::from_bytes(png.clone()))
+                        .width(Length::Fill)
+                        .height(Length::Fixed(preview_height))
+                        .content_fit(cosmic::iced::ContentFit::Contain)
+                        .expand(false),
+                )
+                .width(Length::Fill)
+                .height(Length::Fixed(preview_height))
+                .max_height(preview_height)
+                .clip(true)
+                .into()
             });
 
             let mut col = widget::column::Column::new()
@@ -40,16 +75,17 @@ pub(super) fn history_row<'a>(
             if let Some(thumb) = thumb {
                 col = col.push(thumb);
             }
-            if app.hovered_index == Some(idx) {
-                col = col.push(
-                    widget::text::caption(format!(
-                        "{} ({} KB)",
-                        mime,
-                        (bytes.len().saturating_add(1023)) / 1024
-                    ))
-                    .width(Length::Fill),
-                );
-            }
+            let details = if row_is_active {
+                format!(
+                    "{} ({} KB)",
+                    mime,
+                    (bytes.len().saturating_add(1023)) / 1024
+                )
+            } else {
+                "\u{00A0}".to_string()
+            };
+
+            col = col.push(widget::text::caption(details).width(Length::Fill));
             col.into()
         }
     };
@@ -137,11 +173,12 @@ pub(super) fn history_row<'a>(
                 .width(Length::Fixed(40.0))
                 .padding([0, 2]),
         )
-        .align_y(Alignment::Center)
+        .align_y(row_alignment)
         .width(Length::Fill);
 
     widget::container(entry)
         .class(cosmic::theme::Container::Card)
         .width(Length::Fill)
+        .clip(true)
         .into()
 }

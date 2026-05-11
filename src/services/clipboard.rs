@@ -10,6 +10,7 @@ pub use model::{ClipboardEntry, ClipboardFingerprint};
 
 const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;
 const THUMBNAIL_SIZE_PX: u32 = 400;
+const MAX_IMAGE_DIMENSION_PX: u32 = 8192;
 
 pub fn read_clipboard_entry() -> Option<ClipboardEntry> {
     io::read_clipboard_entry()

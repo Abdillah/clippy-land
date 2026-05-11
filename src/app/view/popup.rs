@@ -75,6 +75,7 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         .width(Length::Fill),
     )
     .max_height(400.0)
+    .clip(true)
     .width(Length::Fill);
 
     let search_bar = widget::container(

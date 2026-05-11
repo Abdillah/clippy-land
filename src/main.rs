@@ -4,6 +4,14 @@ mod ipc;
 mod services;
 
 fn main() -> cosmic::iced::Result {
+    if std::env::var_os("ICED_BACKEND").is_none() {
+        // SAFETY: This happens at process start before any threads are spawned,
+        // so setting the process environment here is safe.
+        unsafe {
+            std::env::set_var("ICED_BACKEND", "wgpu");
+        }
+    }
+
     for arg in std::env::args().skip(1) {
         if arg == "--toggle" || arg == "-t" {
             if let Err(e) = ipc::send_toggle_signal() {

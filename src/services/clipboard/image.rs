@@ -1,4 +1,6 @@
-use super::{ClipboardEntry, MAX_IMAGE_BYTES, THUMBNAIL_SIZE_PX, debug_log};
+use super::{
+    ClipboardEntry, MAX_IMAGE_BYTES, MAX_IMAGE_DIMENSION_PX, THUMBNAIL_SIZE_PX, debug_log,
+};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Cursor;
@@ -40,6 +42,14 @@ pub(super) fn clipboard_entry_from_image_path(path: &Path) -> Option<ClipboardEn
 }
 
 fn make_thumbnail_png(mime: &str, bytes: &[u8]) -> Option<Vec<u8>> {
+    if !image_dimensions_within_limit(bytes, MAX_IMAGE_DIMENSION_PX) {
+        debug_log(format!(
+            "clipboard image ignored (dimensions exceed {} px)",
+            MAX_IMAGE_DIMENSION_PX
+        ));
+        return None;
+    }
+
     let format = match mime {
         "image/png" => image::ImageFormat::Png,
         "image/jpeg" => image::ImageFormat::Jpeg,
@@ -56,6 +66,19 @@ fn make_thumbnail_png(mime: &str, bytes: &[u8]) -> Option<Vec<u8>> {
         .ok()?;
 
     encode_thumbnail_png(decoded)
+}
+
+fn image_dimensions_within_limit(bytes: &[u8], max_dimension: u32) -> bool {
+    let Ok(reader) = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format()
+    else {
+        return false;
+    };
+
+    let Ok((width, height)) = reader.into_dimensions() else {
+        return false;
+    };
+
+    width > 0 && height > 0 && width <= max_dimension && height <= max_dimension
 }
 
 fn encode_thumbnail_png(decoded: image::DynamicImage) -> Option<Vec<u8>> {
