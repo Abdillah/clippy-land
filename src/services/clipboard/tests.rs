@@ -98,9 +98,7 @@ fn rejects_image_with_oversized_dimensions() {
         .expect("image entry should still be created");
 
     match entry {
-        ClipboardEntry::Image {
-            thumbnail_png, ..
-        } => {
+        ClipboardEntry::Image { thumbnail_png, .. } => {
             assert!(
                 thumbnail_png.is_none(),
                 "oversized-dimension image should not generate thumbnail"
@@ -119,9 +117,7 @@ fn rejects_malformed_image_bytes_for_thumbnail() {
     .expect("entry should still be created with raw bytes");
 
     match entry {
-        ClipboardEntry::Image {
-            thumbnail_png, ..
-        } => {
+        ClipboardEntry::Image { thumbnail_png, .. } => {
             assert!(
                 thumbnail_png.is_none(),
                 "malformed image should not generate thumbnail"

@@ -391,6 +391,8 @@ fn window_unfocused_only_closes_layer_surface_popups() {
 
 #[test]
 fn ipc_signal_path_is_none_when_env_var_unset() {
+    unsafe { std::env::remove_var("CLIPPY_LAND_SIGNAL_FILE") };
+
     // Temporarily remove XDG_RUNTIME_DIR if present
     let saved = std::env::var("XDG_RUNTIME_DIR").ok();
     unsafe { std::env::remove_var("XDG_RUNTIME_DIR") };
@@ -406,6 +408,7 @@ fn ipc_signal_path_is_none_when_env_var_unset() {
 
 #[test]
 fn ipc_signal_path_appends_filename_to_runtime_dir() {
+    unsafe { std::env::remove_var("CLIPPY_LAND_SIGNAL_FILE") };
     unsafe { std::env::set_var("XDG_RUNTIME_DIR", "/tmp/test-runtime") };
 
     let result = crate::ipc::get_signal_file_path();
@@ -419,4 +422,25 @@ fn ipc_signal_path_appends_filename_to_runtime_dir() {
         Some("clippy-land-toggle")
     );
     assert!(path.to_string_lossy().starts_with("/tmp/test-runtime"));
+}
+
+#[test]
+fn ipc_signal_path_prefers_override_env_var() {
+    unsafe {
+        std::env::set_var("CLIPPY_LAND_SIGNAL_FILE", "/tmp/clippy-land-test-signal");
+        std::env::set_var("XDG_RUNTIME_DIR", "/tmp/test-runtime-ignored");
+    }
+
+    let result = crate::ipc::get_signal_file_path();
+
+    unsafe {
+        std::env::remove_var("CLIPPY_LAND_SIGNAL_FILE");
+        std::env::remove_var("XDG_RUNTIME_DIR");
+    }
+
+    let path = result.expect("override signal path should be returned");
+    assert_eq!(
+        path,
+        std::path::PathBuf::from("/tmp/clippy-land-test-signal")
+    );
 }
