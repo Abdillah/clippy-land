@@ -1,6 +1,6 @@
 use super::style::{
-    highlight_history_target, pressed_entry_button_style, transparent_entry_button_style,
-    transparent_icon_button_style,
+    accent_icon_button_style, highlight_history_target, pressed_entry_button_style,
+    transparent_entry_button_style, transparent_icon_button_style,
 };
 use super::summary::{summarize_one_line, summarize_one_line_with_limit};
 use crate::app::model::{FocusPart, HistoryItem};
@@ -17,9 +17,9 @@ pub(super) fn history_row<'a>(
     idx: usize,
     item: &'a HistoryItem,
 ) -> Element<'a, Message> {
-    const TEXT_EXPANDED_MAX_CHARS: usize = 150;
-    const IMAGE_PREVIEW_COLLAPSED_HEIGHT: f32 = 120.0;
-    const IMAGE_PREVIEW_EXPANDED_HEIGHT: f32 = 240.0;
+    const TEXT_EXPANDED_MAX_CHARS: usize = 300;
+    const IMAGE_PREVIEW_COLLAPSED_HEIGHT: f32 = 160.0;
+    const IMAGE_PREVIEW_EXPANDED_HEIGHT: f32 = 200.0;
 
     let row_is_active = app
         .hovered_focus
@@ -111,17 +111,28 @@ pub(super) fn history_row<'a>(
     .on_enter(Message::HoverEntry(Some((idx, FocusPart::Entry))))
     .on_exit(Message::HoverEntry(None));
 
+    let pin_button_class = if item.pinned {
+        cosmic::theme::Button::Custom {
+            active: Box::new(|_, theme| accent_icon_button_style(theme)),
+            disabled: Box::new(accent_icon_button_style),
+            hovered: Box::new(|_, theme| accent_icon_button_style(theme)),
+            pressed: Box::new(|_, theme| accent_icon_button_style(theme)),
+        }
+    } else {
+        cosmic::theme::Button::Custom {
+            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            disabled: Box::new(transparent_icon_button_style),
+            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        }
+    };
+
     let pin_button = widget::button::icon(if item.pinned {
         icons::pin_icon_pinned()
     } else {
         icons::pin_icon()
     })
-    .class(cosmic::theme::Button::Custom {
-        active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        disabled: Box::new(transparent_icon_button_style),
-        hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-    })
+    .class(pin_button_class)
     .tooltip(if item.pinned {
         fl!("unpin")
     } else {

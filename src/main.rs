@@ -2,15 +2,10 @@ mod app;
 mod i18n;
 mod ipc;
 mod services;
+mod settings;
 
 fn main() -> cosmic::iced::Result {
-    if std::env::var_os("ICED_BACKEND").is_none() {
-        // SAFETY: This happens at process start before any threads are spawned,
-        // so setting the process environment here is safe.
-        unsafe {
-            std::env::set_var("ICED_BACKEND", "wgpu");
-        }
-    }
+    let mut open_popup_on_start = std::env::var_os("COSMIC_PANEL_NAME").is_none();
 
     for arg in std::env::args().skip(1) {
         if arg == "--toggle" || arg == "-t" {
@@ -21,6 +16,16 @@ fn main() -> cosmic::iced::Result {
             return Ok(());
         }
 
+        if arg == "--standalone" {
+            open_popup_on_start = true;
+            continue;
+        }
+
+        if arg == "--no-standalone" {
+            open_popup_on_start = false;
+            continue;
+        }
+
         if arg == "-h" || arg == "--help" {
             println!("Clippy Land - Clipboard history applet for COSMIC");
             println!();
@@ -29,6 +34,8 @@ fn main() -> cosmic::iced::Result {
             println!();
             println!("OPTIONS:");
             println!("    -t, --toggle    Toggle the clipboard popup via keyboard shortcut");
+            println!("    --standalone    Open popup window immediately on startup");
+            println!("    --no-standalone Do not auto-open popup on startup");
             println!("    -h, --help      Print this help message");
             println!();
             println!("KEYBOARD SHORTCUT SETUP:");
@@ -43,5 +50,7 @@ fn main() -> cosmic::iced::Result {
 
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
     i18n::init(&requested_languages);
-    cosmic::applet::run::<app::AppModel>(())
+    cosmic::applet::run::<app::AppModel>(app::AppFlags {
+        open_popup_on_start,
+    })
 }

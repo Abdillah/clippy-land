@@ -1,5 +1,5 @@
 use super::{
-    ClipboardEntry, MAX_IMAGE_BYTES, MAX_IMAGE_DIMENSION_PX, THUMBNAIL_SIZE_PX, debug_log,
+    ClipboardEntry, THUMBNAIL_SIZE_PX, debug_log, max_image_bytes, max_image_dimension_px,
 };
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -10,7 +10,8 @@ pub(super) fn clipboard_entry_from_image_bytes(
     mime: String,
     bytes: Vec<u8>,
 ) -> Option<ClipboardEntry> {
-    if bytes.is_empty() || bytes.len() > MAX_IMAGE_BYTES {
+    let max_image_bytes = max_image_bytes();
+    if bytes.is_empty() || bytes.len() > max_image_bytes {
         return None;
     }
 
@@ -42,10 +43,11 @@ pub(super) fn clipboard_entry_from_image_path(path: &Path) -> Option<ClipboardEn
 }
 
 fn make_thumbnail_png(mime: &str, bytes: &[u8]) -> Option<Vec<u8>> {
-    if !image_dimensions_within_limit(bytes, MAX_IMAGE_DIMENSION_PX) {
+    let max_dimension = max_image_dimension_px();
+    if !image_dimensions_within_limit(bytes, max_dimension) {
         debug_log(format!(
             "clipboard image ignored (dimensions exceed {} px)",
-            MAX_IMAGE_DIMENSION_PX
+            max_dimension
         ));
         return None;
     }
@@ -90,8 +92,9 @@ fn encode_thumbnail_png(decoded: image::DynamicImage) -> Option<Vec<u8>> {
 }
 
 pub(super) fn log_image_too_large(len: usize) {
+    let max_image_bytes = max_image_bytes();
     debug_log(format!(
         "clipboard image ignored (too large): {} bytes (max {})",
-        len, MAX_IMAGE_BYTES
+        len, max_image_bytes
     ));
 }

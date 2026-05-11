@@ -2,6 +2,7 @@ use super::{history, scroll, update};
 use crate::app::model::{FocusPart, HistoryItem};
 use crate::app::{AppModel, Message};
 use crate::services::clipboard;
+use crate::settings::AppSettings;
 
 fn text_entry(text: &str) -> clipboard::ClipboardEntry {
     clipboard::ClipboardEntry::Text(text.to_string())
@@ -21,6 +22,15 @@ fn item_text(item: &HistoryItem) -> &str {
             panic!("expected text entry in handler tests")
         }
     }
+}
+
+fn test_settings(max_history: usize, max_pinned: usize) -> AppSettings {
+    AppSettings {
+        max_history,
+        max_pinned,
+        ..AppSettings::default()
+    }
+    .normalized()
 }
 
 #[test]
@@ -80,22 +90,27 @@ fn toggling_pinned_item_moves_it_after_pinned_section() {
 #[test]
 fn toggle_pin_respects_max_pinned_limit() {
     let mut app = AppModel::default();
-    for i in 0..history::MAX_PINNED {
+    app.settings = test_settings(30, 5);
+
+    for i in 0..app.settings.max_pinned {
         app.history.push_back(text_item(&format!("pin-{i}"), true));
     }
     app.history.push_back(text_item("unpinned", false));
 
-    let _ = update(&mut app, Message::TogglePin(history::MAX_PINNED));
+    let max_pinned = app.settings.max_pinned;
+    let _ = update(&mut app, Message::TogglePin(max_pinned));
 
-    assert_eq!(history::pinned_count(&app.history), history::MAX_PINNED);
-    assert_eq!(item_text(&app.history[history::MAX_PINNED]), "unpinned");
-    assert!(!app.history[history::MAX_PINNED].pinned);
+    assert_eq!(history::pinned_count(&app.history), app.settings.max_pinned);
+    assert_eq!(item_text(&app.history[app.settings.max_pinned]), "unpinned");
+    assert!(!app.history[app.settings.max_pinned].pinned);
 }
 
 #[test]
 fn clipboard_changed_trims_to_max_history() {
     let mut app = AppModel::default();
-    for i in 0..history::MAX_HISTORY {
+    app.settings = test_settings(30, 5);
+
+    for i in 0..app.settings.max_history {
         app.history
             .push_back(text_item(&format!("item-{i}"), false));
     }
@@ -105,12 +120,51 @@ fn clipboard_changed_trims_to_max_history() {
         Message::ClipboardChanged(text_entry("fresh-entry")),
     );
 
-    assert_eq!(app.history.len(), history::MAX_HISTORY);
+    assert_eq!(app.history.len(), app.settings.max_history);
     assert_eq!(
         item_text(app.history.front().expect("front entry exists")),
         "fresh-entry"
     );
     assert!(!app.history.iter().any(|it| item_text(it) == "item-29"));
+}
+
+#[test]
+fn reconcile_limits_unpins_overflow_then_reorders() {
+    let mut history_vec = std::collections::VecDeque::new();
+    history_vec.push_back(text_item("a", true));
+    history_vec.push_back(text_item("b", true));
+    history_vec.push_back(text_item("c", true));
+    history_vec.push_back(text_item("d", false));
+
+    let settings = test_settings(10, 2);
+    history::reconcile_limits(&mut history_vec, &settings);
+
+    assert!(history_vec[0].pinned);
+    assert!(history_vec[1].pinned);
+    assert!(!history_vec[2].pinned);
+    assert_eq!(item_text(&history_vec[0]), "a");
+    assert_eq!(item_text(&history_vec[1]), "b");
+    assert_eq!(item_text(&history_vec[2]), "c");
+}
+
+#[test]
+fn reconcile_limits_trims_oldest_unpinned_first() {
+    let mut history_vec = std::collections::VecDeque::new();
+    history_vec.push_back(text_item("p0", true));
+    for i in 0..30 {
+        history_vec.push_back(text_item(&format!("u{i}"), false));
+    }
+
+    let settings = test_settings(30, 1);
+    history::reconcile_limits(&mut history_vec, &settings);
+
+    assert_eq!(history_vec.len(), 30);
+    assert_eq!(item_text(&history_vec[0]), "p0");
+    assert_eq!(item_text(&history_vec[1]), "u0");
+    assert_eq!(
+        item_text(history_vec.back().expect("last entry exists")),
+        "u28"
+    );
 }
 
 #[test]
@@ -273,6 +327,128 @@ fn move_selection_up_wraps_to_last_filtered_index() {
     // Again: from idx 2 → prev in [0,2] is idx 0
     let _ = update(&mut app, Message::MoveSelectionUp);
     assert_eq!(app.hovered_index, Some(0));
+}
+
+#[test]
+fn toggle_settings_panel_opens_and_prefills_draft() {
+    let mut app = AppModel::default();
+    app.settings = AppSettings {
+        max_history: 444,
+        max_pinned: 33,
+        max_image_bytes: 3 * 1024 * 1024,
+        max_image_dimension_px: 2048,
+        ..AppSettings::default()
+    }
+    .normalized();
+
+    let _ = update(&mut app, Message::ToggleSettingsPanel);
+
+    assert!(app.settings_open);
+    assert_eq!(app.settings_draft.max_history, "444");
+    assert_eq!(app.settings_draft.max_pinned, "33");
+    assert_eq!(
+        app.settings_draft.max_image_bytes,
+        (3 * 1024 * 1024).to_string()
+    );
+    assert_eq!(app.settings_draft.max_image_dimension_px, "2048");
+}
+
+#[test]
+fn apply_settings_rejects_invalid_input_with_error() {
+    let mut app = AppModel::default();
+    app.settings_open = true;
+    app.settings_draft.max_history = "not-a-number".into();
+    app.settings_draft.max_pinned = "10".into();
+    app.settings_draft.max_image_bytes = "1048576".into();
+    app.settings_draft.max_image_dimension_px = "2048".into();
+
+    let _ = update(&mut app, Message::ApplySettings);
+
+    assert!(app.settings_open);
+    assert!(app.settings_error.is_some());
+}
+
+#[test]
+fn apply_settings_rejects_out_of_range_values() {
+    let mut app = AppModel::default();
+    app.settings_open = true;
+    app.settings_draft.max_history = "1".into();
+    app.settings_draft.max_pinned = "0".into();
+    app.settings_draft.max_image_bytes = "1048576".into();
+    app.settings_draft.max_image_dimension_px = "1024".into();
+
+    let _ = update(&mut app, Message::ApplySettings);
+
+    assert!(app.settings_open);
+    let err = app.settings_error.expect("range error should be present");
+    assert!(err.contains("Max history must be between"));
+}
+
+#[test]
+fn apply_settings_rejects_pinned_greater_than_history() {
+    let mut app = AppModel::default();
+    app.settings_open = true;
+    app.settings_draft.max_history = "100".into();
+    app.settings_draft.max_pinned = "101".into();
+    app.settings_draft.max_image_bytes = "1048576".into();
+    app.settings_draft.max_image_dimension_px = "1024".into();
+
+    let _ = update(&mut app, Message::ApplySettings);
+
+    assert!(app.settings_open);
+    assert_eq!(
+        app.settings_error.as_deref(),
+        Some("Max pinned cannot be greater than max history")
+    );
+}
+
+#[test]
+fn apply_settings_rejects_image_bytes_below_minimum() {
+    let mut app = AppModel::default();
+    app.settings_open = true;
+    app.settings_draft.max_history = "200".into();
+    app.settings_draft.max_pinned = "20".into();
+    app.settings_draft.max_image_bytes = "1".into();
+    app.settings_draft.max_image_dimension_px = "1024".into();
+
+    let _ = update(&mut app, Message::ApplySettings);
+
+    assert!(app.settings_open);
+    let err = app.settings_error.expect("range error should be present");
+    assert!(err.contains("Max image bytes must be between"));
+}
+
+#[test]
+fn apply_settings_updates_runtime_settings_and_closes_panel() {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("time should be after unix epoch")
+        .as_nanos();
+    let cfg_path = std::env::temp_dir().join(format!("clippy-land-test-settings-{unique}.toml"));
+    unsafe { std::env::set_var("CLIPPY_LAND_CONFIG", &cfg_path) };
+
+    let mut app = AppModel::default();
+    app.settings_open = true;
+    app.settings_draft.max_history = "350".into();
+    app.settings_draft.max_pinned = "30".into();
+    app.settings_draft.max_image_bytes = "2097152".into();
+    app.settings_draft.max_image_dimension_px = "4096".into();
+
+    let _ = update(&mut app, Message::ApplySettings);
+
+    assert!(!app.settings_open);
+    assert!(app.settings_error.is_none());
+    assert_eq!(app.settings.max_history, 350);
+    assert_eq!(app.settings.max_pinned, 30);
+    assert_eq!(app.settings.max_image_bytes, 2 * 1024 * 1024);
+    assert_eq!(app.settings.max_image_dimension_px, 4096);
+
+    let persisted = std::fs::read_to_string(&cfg_path).expect("settings should be written");
+    assert!(persisted.contains("max_history = 350"));
+    assert!(persisted.contains("max_pinned = 30"));
+
+    let _ = std::fs::remove_file(cfg_path);
+    unsafe { std::env::remove_var("CLIPPY_LAND_CONFIG") };
 }
 
 #[test]

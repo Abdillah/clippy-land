@@ -1,4 +1,5 @@
 use crate::services::clipboard;
+use crate::settings::AppSettings;
 use cosmic::iced::window::Id;
 use std::collections::VecDeque;
 
@@ -12,11 +13,18 @@ pub(super) struct HistoryItem {
 #[derive(Default)]
 pub struct AppModel {
     pub(super) core: cosmic::Core,
+    pub(super) settings: AppSettings,
     pub(super) popup: Option<Id>,
     /// True when the popup was opened via IPC (layer surface), false for icon click (XDG popup).
     pub(super) popup_is_layer_surface: bool,
     /// Current search query for filtering clipboard history.
     pub(super) search_query: String,
+    /// Whether settings panel is visible inside popup.
+    pub(super) settings_open: bool,
+    /// Draft settings form values (text inputs).
+    pub(super) settings_draft: SettingsDraft,
+    /// Last settings save/validation error shown in UI.
+    pub(super) settings_error: Option<String>,
     /// Latest clipboard entries, newest-first (with pinned items kept at the top).
     pub(super) history: VecDeque<HistoryItem>,
     /// Index of the history entry the mouse is currently hovering over.
@@ -28,6 +36,25 @@ pub struct AppModel {
     pub(super) history_viewport: Option<cosmic::iced::widget::scrollable::Viewport>,
     /// Keyboard focus within the history: (index, part) where part is Entry/Pin/Remove
     pub(super) keyboard_focus: Option<(usize, FocusPart)>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SettingsDraft {
+    pub max_history: String,
+    pub max_pinned: String,
+    pub max_image_bytes: String,
+    pub max_image_dimension_px: String,
+}
+
+impl SettingsDraft {
+    pub fn from_settings(settings: &AppSettings) -> Self {
+        Self {
+            max_history: settings.max_history.to_string(),
+            max_pinned: settings.max_pinned.to_string(),
+            max_image_bytes: settings.max_image_bytes.to_string(),
+            max_image_dimension_px: settings.max_image_dimension_px.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

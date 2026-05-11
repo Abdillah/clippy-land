@@ -1,8 +1,9 @@
 use super::{history, scroll};
-use crate::app::model::{FocusPart, HistoryItem};
+use crate::app::model::{FocusPart, HistoryItem, SettingsDraft};
 use crate::app::view::filtered_indices;
 use crate::app::{AppModel, Message};
-use crate::services::clipboard::ClipboardEntry;
+use crate::services::clipboard::{self, ClipboardEntry};
+use crate::settings::AppSettings;
 use cosmic::iced::Limits;
 use cosmic::iced::platform_specific::shell::wayland::commands::layer_surface::{
     self, KeyboardInteractivity, destroy_layer_surface, get_layer_surface,
@@ -36,10 +37,10 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 .is_some_and(|it| it.pinned);
 
             history::insert_after_pins(&mut app.history, HistoryItem { entry, pinned });
-            history::trim_history(&mut app.history);
+            history::trim_history(&mut app.history, &app.settings);
         }
         Message::TogglePin(index) => {
-            history::toggle_pin(&mut app.history, index);
+            history::toggle_pin(&mut app.history, index, &app.settings);
         }
         Message::CopyFromHistory(index) => {
             if let Some(item) = app.history.get(index) {
@@ -147,7 +148,7 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                         }
                     }
                     FocusPart::Pin => {
-                        history::toggle_pin(&mut app.history, idx);
+                        history::toggle_pin(&mut app.history, idx, &app.settings);
                     }
                     FocusPart::Remove => {
                         let _ = app.history.remove(idx);
@@ -165,11 +166,133 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
             app.hovered_focus = None;
             app.keyboard_focus = None;
         }
+        Message::ToggleSettingsPanel => {
+            app.settings_open = !app.settings_open;
+            app.settings_error = None;
+            if app.settings_open {
+                app.settings_draft = SettingsDraft::from_settings(&app.settings);
+            }
+        }
+        Message::SettingsMaxHistoryChanged(value) => {
+            app.settings_draft.max_history = value;
+        }
+        Message::SettingsMaxPinnedChanged(value) => {
+            app.settings_draft.max_pinned = value;
+        }
+        Message::SettingsMaxImageBytesChanged(value) => {
+            app.settings_draft.max_image_bytes = value;
+        }
+        Message::SettingsMaxImageDimensionChanged(value) => {
+            app.settings_draft.max_image_dimension_px = value;
+        }
+        Message::ApplySettings => {
+            let max_history = match parse_usize_field(&app.settings_draft.max_history) {
+                Ok(v) => v,
+                Err(err) => {
+                    app.settings_error = Some(format!("Max history: {err}"));
+                    return Task::none();
+                }
+            };
+            let max_pinned = match parse_usize_field(&app.settings_draft.max_pinned) {
+                Ok(v) => v,
+                Err(err) => {
+                    app.settings_error = Some(format!("Max pinned: {err}"));
+                    return Task::none();
+                }
+            };
+            let max_image_bytes = match parse_usize_field(&app.settings_draft.max_image_bytes) {
+                Ok(v) => v,
+                Err(err) => {
+                    app.settings_error = Some(format!("Max image bytes: {err}"));
+                    return Task::none();
+                }
+            };
+            let max_image_dimension_px =
+                match parse_u32_field(&app.settings_draft.max_image_dimension_px) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        app.settings_error = Some(format!("Max image dimension: {err}"));
+                        return Task::none();
+                    }
+                };
+
+            if !(AppSettings::MIN_HISTORY..=AppSettings::MAX_HISTORY).contains(&max_history) {
+                app.settings_error = Some(format!(
+                    "Max history must be between {} and {}",
+                    AppSettings::MIN_HISTORY,
+                    AppSettings::MAX_HISTORY
+                ));
+                return Task::none();
+            }
+
+            if !(AppSettings::MIN_PINNED..=AppSettings::MAX_PINNED).contains(&max_pinned) {
+                app.settings_error = Some(format!(
+                    "Max pinned must be between {} and {}",
+                    AppSettings::MIN_PINNED,
+                    AppSettings::MAX_PINNED
+                ));
+                return Task::none();
+            }
+
+            if max_pinned > max_history {
+                app.settings_error = Some("Max pinned cannot be greater than max history".into());
+                return Task::none();
+            }
+
+            if !(AppSettings::MIN_IMAGE_BYTES..=AppSettings::MAX_IMAGE_BYTES)
+                .contains(&max_image_bytes)
+            {
+                app.settings_error = Some(format!(
+                    "Max image bytes must be between {} and {}",
+                    AppSettings::MIN_IMAGE_BYTES,
+                    AppSettings::MAX_IMAGE_BYTES
+                ));
+                return Task::none();
+            }
+
+            if !(AppSettings::MIN_IMAGE_DIMENSION_PX..=AppSettings::MAX_IMAGE_DIMENSION_PX)
+                .contains(&max_image_dimension_px)
+            {
+                app.settings_error = Some(format!(
+                    "Max image dimension must be between {} and {}",
+                    AppSettings::MIN_IMAGE_DIMENSION_PX,
+                    AppSettings::MAX_IMAGE_DIMENSION_PX
+                ));
+                return Task::none();
+            }
+
+            let updated = AppSettings {
+                schema_version: 1,
+                max_history,
+                max_pinned,
+                max_image_bytes,
+                max_image_dimension_px,
+            }
+            .normalized();
+
+            if let Err(err) = updated.save() {
+                app.settings_error = Some(format!("Failed to save settings: {err}"));
+                return Task::none();
+            }
+
+            app.settings = updated;
+            app.settings_draft = SettingsDraft::from_settings(&app.settings);
+            app.settings_error = None;
+            app.settings_open = false;
+
+            clipboard::configure_limits(
+                app.settings.max_image_bytes,
+                app.settings.max_image_dimension_px,
+            );
+            history::reconcile_limits(&mut app.history, &app.settings);
+        }
         Message::TogglePopup => {
             return if let Some(p) = app.popup.take() {
                 let is_layer = app.popup_is_layer_surface;
                 app.popup_is_layer_surface = false;
                 app.search_query.clear();
+                app.settings_open = false;
+                app.settings_error = None;
                 if is_layer {
                     destroy_layer_surface(p)
                 } else {
@@ -194,6 +317,8 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 let is_layer = app.popup_is_layer_surface;
                 app.popup_is_layer_surface = false;
                 app.search_query.clear();
+                app.settings_open = false;
+                app.settings_error = None;
                 if is_layer {
                     destroy_layer_surface(p)
                 } else {
@@ -223,6 +348,8 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 return if let Some(p) = app.popup.take() {
                     app.popup_is_layer_surface = false;
                     app.search_query.clear();
+                    app.settings_open = false;
+                    app.settings_error = None;
                     app.hovered_index = None;
                     app.at_scroll_bottom = false;
                     app.history_viewport = None;
@@ -237,6 +364,8 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 app.popup = None;
                 app.popup_is_layer_surface = false;
                 app.search_query.clear();
+                app.settings_open = false;
+                app.settings_error = None;
                 app.hovered_index = None;
                 app.at_scroll_bottom = false;
                 app.history_viewport = None;
@@ -244,4 +373,24 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
         }
     }
     Task::none()
+}
+
+fn parse_usize_field(input: &str) -> Result<usize, &'static str> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("value is required");
+    }
+    trimmed
+        .parse::<usize>()
+        .map_err(|_| "must be a valid positive integer")
+}
+
+fn parse_u32_field(input: &str) -> Result<u32, &'static str> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("value is required");
+    }
+    trimmed
+        .parse::<u32>()
+        .map_err(|_| "must be a valid positive integer")
 }

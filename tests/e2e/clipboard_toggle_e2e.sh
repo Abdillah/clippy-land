@@ -105,10 +105,16 @@ printf 'Building debug binary...\n'
 cargo build >/dev/null
 
 printf 'Launching app instance for E2E...\n'
-CLIPPY_LAND_SIGNAL_FILE="$SIGNAL_FILE" "$APP_BIN" >"$LOG_FILE" 2>&1 &
+CLIPPY_LAND_SIGNAL_FILE="$SIGNAL_FILE" "$APP_BIN" --no-standalone >"$LOG_FILE" 2>&1 &
 APP_PID=$!
 
 sleep 1
+
+# Ensure app instance is alive before starting scenarios.
+if ! kill -0 "$APP_PID" >/dev/null 2>&1; then
+    printf 'app instance exited before scenarios started\n' >&2
+    exit 1
+fi
 
 printf 'Scenario 1: text selection/copy via toggle + keyboard...\n'
 copy_text 'e2e-text-first'
