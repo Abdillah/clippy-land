@@ -26,8 +26,8 @@
       "name": "cosmic-applet-clippy-land",
       "buildsystem": "simple",
       "build-commands": [
-        "cargo --offline fetch --manifest-path Cargo.toml --verbose",
-        "cargo --offline build --release --verbose",
+        "cargo fetch --locked --offline --manifest-path Cargo.toml --verbose",
+        "cargo build --locked --offline --release --verbose",
         "install -Dm0755 target/release/cosmic-applet-clippy-land /app/bin/cosmic-applet-clippy-land",
         "install -Dm0755 resources/cosmic-applet-clippy-land.sh /app/bin/cosmic-applet-clippy-land.sh",
         "install -Dm0644 resources/io.github.k33wee.clippy-land.desktop /app/share/applications/io.github.k33wee.clippy-land.desktop",
