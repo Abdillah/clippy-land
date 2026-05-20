@@ -214,9 +214,10 @@ All paths are derived from `prefix`:
 
 Clippy Land is available in the following languages, thanks to:
 
-- **Italian** ([k33wee](https://github.com/k33wee))
 - **English** ([k33wee](https://github.com/k33wee))
+- **Italian** ([k33wee](https://github.com/k33wee))
 - **Portuguese** ([GuilhermeTerriaga](https://github.com/GuilhermeTerriaga))
 - **Czech** ([lorduskordus](https://github.com/lorduskordus))
 - **Ukrainian** ([Dymkom](https://github.com/Dymkom))
 - **Swedish** ([bittin](https://github.com/bittin))
+- **French** ([Thovi98](https://github.com/Thovi98))
