@@ -206,6 +206,10 @@ All paths are derived from `prefix`:
 
 - App ID is currently `io.github.k33wee.clippy-land`.
 
+## Attribution
+
+- "Cosmic Icons" by System76 is licensed under CC-SA-4.0
+
 ## Translations
 
 Clippy Land is available in the following languages, thanks to:
