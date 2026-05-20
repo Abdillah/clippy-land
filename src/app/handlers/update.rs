@@ -10,6 +10,7 @@ use cosmic::iced::platform_specific::shell::wayland::commands::layer_surface::{
 };
 use cosmic::iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use cosmic::iced::runtime::platform_specific::wayland::layer_surface::SctkLayerSurfaceSettings;
+use cosmic::iced::widget::image::Handle as ImageHandle;
 use cosmic::prelude::*;
 
 pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Message>> {
@@ -29,6 +30,8 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 }
             }
 
+            cache_thumbnail_handle(app, &entry);
+
             let pinned = app
                 .history
                 .iter()
@@ -38,9 +41,12 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
 
             history::insert_after_pins(&mut app.history, HistoryItem { entry, pinned });
             history::trim_history(&mut app.history, &app.settings);
+            prune_thumbnail_handles(app);
+            app.recompute_filtered_indices();
         }
         Message::TogglePin(index) => {
             history::toggle_pin(&mut app.history, index, &app.settings);
+            app.recompute_filtered_indices();
         }
         Message::CopyFromHistory(index) => {
             if let Some(item) = app.history.get(index) {
@@ -49,11 +55,20 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
         }
         Message::RemoveHistory(index) => {
             let _ = app.history.remove(index);
+            prune_thumbnail_handles(app);
+            app.recompute_filtered_indices();
         }
         Message::ClearHistory => {
             app.history.clear();
+            app.thumbnail_handles.clear();
+            app.recompute_filtered_indices();
         }
         Message::HoverEntry(opt) => {
+            let next_index = opt.map(|(idx, _)| idx);
+            if app.hovered_index == next_index && app.hovered_focus == opt {
+                return Task::none();
+            }
+
             if let Some((idx, part)) = opt {
                 app.hovered_index = Some(idx);
                 app.hovered_focus = Some((idx, part));
@@ -149,9 +164,12 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                     }
                     FocusPart::Pin => {
                         history::toggle_pin(&mut app.history, idx, &app.settings);
+                        app.recompute_filtered_indices();
                     }
                     FocusPart::Remove => {
                         let _ = app.history.remove(idx);
+                        prune_thumbnail_handles(app);
+                        app.recompute_filtered_indices();
                     }
                 }
             } else if let Some(idx) = app.hovered_index {
@@ -162,6 +180,7 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
         }
         Message::SearchChanged(query) => {
             app.search_query = query;
+            app.recompute_filtered_indices();
             app.hovered_index = None;
             app.hovered_focus = None;
             app.keyboard_focus = None;
@@ -285,6 +304,8 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                 app.settings.max_image_dimension_px,
             );
             history::reconcile_limits(&mut app.history, &app.settings);
+            prune_thumbnail_handles(app);
+            app.recompute_filtered_indices();
         }
         Message::TogglePopup => {
             return if let Some(p) = app.popup.take() {
@@ -373,6 +394,31 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
         }
     }
     Task::none()
+}
+
+fn cache_thumbnail_handle(app: &mut AppModel, entry: &ClipboardEntry) {
+    let ClipboardEntry::Image {
+        bytes,
+        hash,
+        thumbnail_png: Some(thumbnail_png),
+        ..
+    } = entry
+    else {
+        return;
+    };
+
+    app.thumbnail_handles
+        .entry((*hash, bytes.len()))
+        .or_insert_with(|| ImageHandle::from_bytes(thumbnail_png.clone()));
+}
+
+fn prune_thumbnail_handles(app: &mut AppModel) {
+    app.thumbnail_handles.retain(|key, _| {
+        app.history.iter().any(|item| match &item.entry {
+            ClipboardEntry::Image { bytes, hash, .. } => key == &(*hash, bytes.len()),
+            ClipboardEntry::Text(_) => false,
+        })
+    });
 }
 
 fn parse_usize_field(input: &str) -> Result<usize, &'static str> {

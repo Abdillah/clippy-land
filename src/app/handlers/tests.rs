@@ -15,6 +15,15 @@ fn text_item(text: &str, pinned: bool) -> HistoryItem {
     }
 }
 
+fn image_entry(hash: u64) -> clipboard::ClipboardEntry {
+    clipboard::ClipboardEntry::Image {
+        mime: "image/png".to_string(),
+        bytes: vec![1, 2, 3, 4],
+        hash,
+        thumbnail_png: Some(vec![137, 80, 78, 71]),
+    }
+}
+
 fn item_text(item: &HistoryItem) -> &str {
     match &item.entry {
         clipboard::ClipboardEntry::Text(text) => text,
@@ -70,6 +79,45 @@ fn clipboard_changed_dedupes_and_preserves_pin_state() {
         .position(|it| it.entry == repeated)
         .expect("entry should still exist");
     assert!(app.history[idx].pinned);
+}
+
+#[test]
+fn clipboard_changed_caches_and_prunes_thumbnail_handles() {
+    let mut app = AppModel::default();
+
+    let _ = update(&mut app, Message::ClipboardChanged(image_entry(42)));
+    assert_eq!(app.thumbnail_handles.len(), 1);
+
+    let _ = update(&mut app, Message::RemoveHistory(0));
+    assert!(app.history.is_empty());
+    assert!(app.thumbnail_handles.is_empty());
+}
+
+#[test]
+fn clipboard_changed_recomputes_filtered_indices_cache() {
+    let mut app = AppModel::default();
+    app.search_query = "ap".into();
+    app.recompute_filtered_indices();
+    assert!(app.filtered_indices.is_empty());
+
+    let _ = update(
+        &mut app,
+        Message::ClipboardChanged(clipboard::ClipboardEntry::Text("apple".into())),
+    );
+
+    assert_eq!(app.filtered_indices, vec![0]);
+}
+
+#[test]
+fn clear_history_clears_thumbnail_handles() {
+    let mut app = AppModel::default();
+
+    let _ = update(&mut app, Message::ClipboardChanged(image_entry(7)));
+    assert_eq!(app.thumbnail_handles.len(), 1);
+
+    let _ = update(&mut app, Message::ClearHistory);
+    assert!(app.history.is_empty());
+    assert!(app.thumbnail_handles.is_empty());
 }
 
 #[test]
@@ -289,6 +337,34 @@ fn hover_entry_none_clears_hover_state() {
     assert!(app.hovered_focus.is_none());
 }
 
+#[test]
+fn redundant_hover_entry_does_not_clear_keyboard_focus() {
+    let mut app = AppModel::default();
+    app.history.push_back(text_item("item", false));
+    app.hovered_index = Some(0);
+    app.hovered_focus = Some((0, FocusPart::Entry));
+    app.keyboard_focus = Some((0, FocusPart::Remove));
+
+    let _ = update(&mut app, Message::HoverEntry(Some((0, FocusPart::Entry))));
+
+    assert_eq!(app.hovered_index, Some(0));
+    assert_eq!(app.hovered_focus, Some((0, FocusPart::Entry)));
+    assert_eq!(app.keyboard_focus, Some((0, FocusPart::Remove)));
+}
+
+#[test]
+fn hover_entry_action_exit_can_fall_back_to_entry_without_clearing() {
+    let mut app = AppModel::default();
+    app.history.push_back(text_item("item", false));
+
+    let _ = update(&mut app, Message::HoverEntry(Some((0, FocusPart::Pin))));
+    assert_eq!(app.hovered_focus, Some((0, FocusPart::Pin)));
+
+    let _ = update(&mut app, Message::HoverEntry(Some((0, FocusPart::Entry))));
+    assert_eq!(app.hovered_index, Some(0));
+    assert_eq!(app.hovered_focus, Some((0, FocusPart::Entry)));
+}
+
 // ── Keyboard nav with filtered results ───────────────────────────────────────
 
 #[test]
@@ -298,6 +374,7 @@ fn move_selection_down_steps_through_filtered_indices() {
     app.history.push_back(text_item("banana", false)); // idx 1 – no match
     app.history.push_back(text_item("apricot", false)); // idx 2 – matches
     app.search_query = "ap".into();
+    app.recompute_filtered_indices();
 
     // First press: no previous selection → picks first filtered idx (0)
     let _ = update(&mut app, Message::MoveSelectionDown);
@@ -319,6 +396,7 @@ fn move_selection_up_wraps_to_last_filtered_index() {
     app.history.push_back(text_item("banana", false)); // idx 1
     app.history.push_back(text_item("apricot", false)); // idx 2
     app.search_query = "ap".into();
+    app.recompute_filtered_indices();
 
     // No selection → Up picks last filtered (idx 2)
     let _ = update(&mut app, Message::MoveSelectionUp);
@@ -456,12 +534,25 @@ fn move_selection_does_nothing_when_filtered_list_is_empty() {
     let mut app = AppModel::default();
     app.history.push_back(text_item("apple", false));
     app.search_query = "zzz".into();
+    app.recompute_filtered_indices();
 
     let _ = update(&mut app, Message::MoveSelectionDown);
     assert!(app.hovered_index.is_none());
 
     let _ = update(&mut app, Message::MoveSelectionUp);
     assert!(app.hovered_index.is_none());
+}
+
+#[test]
+fn search_changed_recomputes_filtered_indices_cache() {
+    let mut app = AppModel::default();
+    app.history.push_back(text_item("apple", false));
+    app.history.push_back(text_item("banana", false));
+    app.recompute_filtered_indices();
+    assert_eq!(app.filtered_indices, vec![0, 1]);
+
+    let _ = update(&mut app, Message::SearchChanged("ap".into()));
+    assert_eq!(app.filtered_indices, vec![0]);
 }
 
 // ── MoveFocusLeft / MoveFocusRight ───────────────────────────────────────────

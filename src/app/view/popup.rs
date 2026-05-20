@@ -1,7 +1,6 @@
-use super::row::history_row;
+use super::row::{RowRenderState, history_row};
 use crate::app::{AppModel, Message, icons};
 use crate::fl;
-use crate::services::clipboard::ClipboardEntry;
 use cosmic::iced::{Alignment, Length, window::Id};
 use cosmic::prelude::*;
 use cosmic::widget;
@@ -16,19 +15,18 @@ pub(super) fn view(app: &AppModel) -> Element<'_, Message> {
 
 /// Returns the indices into `app.history` that match the current search query.
 pub(crate) fn filtered_indices(app: &AppModel) -> Vec<usize> {
-    let query = app.search_query.to_lowercase();
-    if query.is_empty() {
-        return (0..app.history.len()).collect();
+    let cache_looks_valid = app.filtered_query_cache == app.search_query
+        && app.filtered_history_len_cache == app.history.len()
+        && app
+            .filtered_indices
+            .iter()
+            .all(|&idx| idx < app.history.len());
+
+    if cache_looks_valid {
+        app.filtered_indices.clone()
+    } else {
+        AppModel::compute_filtered_indices_for(&app.history, &app.search_query)
     }
-    app.history
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| match &item.entry {
-            ClipboardEntry::Text(text) => text.to_lowercase().contains(&query),
-            ClipboardEntry::Image { mime, .. } => mime.to_lowercase().contains(&query),
-        })
-        .map(|(idx, _)| idx)
-        .collect()
 }
 
 pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
@@ -60,7 +58,8 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
                 history_column = history_column.push(widget::divider::horizontal::default());
             }
 
-            history_column = history_column.push(history_row(app, idx, &app.history[idx]));
+            let row_state = RowRenderState::from_app(app, idx, &app.history[idx]);
+            history_column = history_column.push(history_row(row_state));
         }
     }
 

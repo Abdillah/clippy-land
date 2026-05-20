@@ -53,6 +53,7 @@ impl cosmic::Application for AppModel {
             settings,
             ..Default::default()
         };
+        app.recompute_filtered_indices();
 
         if flags.open_popup_on_start {
             let new_id = cosmic::iced::window::Id::unique();
