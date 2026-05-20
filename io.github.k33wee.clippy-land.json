@@ -42,7 +42,7 @@
           "type": "git",
           "url": "https://github.com/k33wee/clippy-land.git",
           "tag": "v0.5.0",
-          "commit": "34beb93b36943861b64ebd574f91f94882ae3fdd"
+          "commit": "ec7f5c2aeeba4a69cff267af45d73c19d842d878"
         },
         "cargo-sources.json"
       ]

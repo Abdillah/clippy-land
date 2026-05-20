@@ -23,10 +23,10 @@ flatpak install -y --user flathub org.freedesktop.Sdk.Extension.rust-stable//25.
 flatpak install -y --user cosmic com.system76.Cosmic.BaseApp//stable
 
 # 4. Verify the generated Cargo sources match Cargo.lock
-python3 scripts/check-cargo-sources.py
+uv run scripts/check-cargo-sources.py
 # If this fails after a dependency update, run:
 # ./generate-cargo-sources.sh
-# python3 scripts/check-cargo-sources.py
+# uv run scripts/check-cargo-sources.py
 # Then commit the updated cargo-sources.json.
 
 # 5. Build locally (from the clippy-land project root):
