@@ -5,7 +5,7 @@ fn symbolic_icon(name: &str) -> widget::icon::Handle {
 }
 
 pub fn remove_icon() -> widget::icon::Handle {
-    symbolic_icon("user-trash-symbolic")
+    symbolic_icon("edit-delete-symbolic")
 }
 
 pub fn pin_icon() -> widget::icon::Handle {
