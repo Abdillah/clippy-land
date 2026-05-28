@@ -4,6 +4,7 @@ use crate::app::model::HistoryItem;
 use crate::app::view::popup::{filtered_indices, selected_text_overlay};
 use crate::app::view::row::{RowContent, RowRenderState};
 use crate::services::clipboard::ClipboardEntry;
+use cosmic::iced::widget::image::Handle as ImageHandle;
 
 #[test]
 fn summarizes_first_nonempty_line() {
@@ -150,15 +151,18 @@ fn row_render_state_text_snapshot_keeps_only_needed_summaries() {
 #[test]
 fn row_render_state_image_snapshot_keeps_lightweight_metadata_and_handle() {
     let mut app = AppModel::default();
+    let thumbnail = vec![1, 2, 3, 4];
     app.history.push_back(HistoryItem {
         entry: ClipboardEntry::Image {
             mime: "image/png".into(),
             bytes: vec![7; 4096],
             hash: 42,
-            thumbnail_png: Some(vec![1, 2, 3, 4]),
+            thumbnail_png: Some(thumbnail.clone()),
         },
         pinned: true,
     });
+    app.thumbnail_handles
+        .insert((42, 4096), ImageHandle::from_bytes(thumbnail));
 
     let state = RowRenderState::from_app(&app, 0, &app.history[0]);
 
@@ -174,6 +178,31 @@ fn row_render_state_image_snapshot_keeps_lightweight_metadata_and_handle() {
             assert_eq!(content_hash, 42);
             assert!(thumbnail_handle.is_some());
             assert!(state.pinned);
+        }
+        RowContent::Text { .. } => panic!("expected image row snapshot"),
+    }
+}
+
+#[test]
+fn row_render_state_image_snapshot_without_cached_handle_keeps_none() {
+    let mut app = AppModel::default();
+    app.history.push_back(HistoryItem {
+        entry: ClipboardEntry::Image {
+            mime: "image/png".into(),
+            bytes: vec![7; 4096],
+            hash: 777,
+            thumbnail_png: Some(vec![1, 2, 3, 4]),
+        },
+        pinned: false,
+    });
+
+    let state = RowRenderState::from_app(&app, 0, &app.history[0]);
+
+    match state.content {
+        RowContent::Image {
+            thumbnail_handle, ..
+        } => {
+            assert!(thumbnail_handle.is_none());
         }
         RowContent::Text { .. } => panic!("expected image row snapshot"),
     }

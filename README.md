@@ -23,7 +23,7 @@ the contents change.
   - max image byte size
   - max image dimensions
 - Smooth row behavior for text and image entries:
-  - text rows stay collapsed in-list and expose a lens button for full-text preview overlay
+  - text rows stay collapsed in-list and expose a lens button for a large full-text preview overlay inside the popup
   - image previews keep a fixed size and centered row actions for stable targeting
 - Move between entries with keyboard ( **up/down** or **k/j** to navigate rows; **left/right** or **h/l** to move between row actions: copy, preview (when available), pin, delete)
 - Keyboard activation and escape behavior:

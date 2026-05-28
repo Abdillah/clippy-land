@@ -103,15 +103,22 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     .clip(true)
     .width(Length::Fill);
 
-    let history_area: Element<'_, Message> = if let Some(text_overlay) =
-        selected_text_overlay(app, &visible)
-    {
-        cosmic::iced::widget::stack([history_scrollable.into(), text_overlay_layer(text_overlay)])
+    let history_area: Element<'_, Message> =
+        if let Some(text_overlay) = selected_text_overlay(app, &visible) {
+            widget::container(
+                cosmic::iced::widget::stack([
+                    history_scrollable.into(),
+                    text_overlay_layer(text_overlay),
+                ])
+                .width(Length::Fill)
+                .height(Length::Fill),
+            )
             .width(Length::Fill)
+            .height(380.0)
             .into()
-    } else {
-        history_scrollable.into()
-    };
+        } else {
+            history_scrollable.into()
+        };
 
     let search_bar = widget::container(
         widget::search_input(fl!("search-placeholder"), &app.search_query)
@@ -186,6 +193,7 @@ fn text_overlay_layer(text: String) -> Element<'static, Message> {
         widget::container(
             widget::column::Column::new()
                 .spacing(8)
+                .height(Length::Fill)
                 .push(header)
                 .push(widget::divider::horizontal::default())
                 .push(

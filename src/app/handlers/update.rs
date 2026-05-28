@@ -370,6 +370,7 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                     destroy_popup(p)
                 }
             } else {
+                warm_thumbnail_handles(app);
                 app.begin_popup_open_trace("icon-click");
                 let new_id = cosmic::iced::window::Id::unique();
                 app.popup.replace(new_id);
@@ -399,6 +400,7 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                     destroy_popup(p)
                 }
             } else {
+                warm_thumbnail_handles(app);
                 app.begin_popup_open_trace("ipc-toggle");
                 let new_id = cosmic::iced::window::Id::unique();
                 app.popup.replace(new_id);
@@ -487,6 +489,24 @@ fn prune_thumbnail_handles(app: &mut AppModel) {
             ClipboardEntry::Text(_) => false,
         })
     });
+}
+
+fn warm_thumbnail_handles(app: &mut AppModel) {
+    for item in app.history.iter() {
+        let ClipboardEntry::Image {
+            bytes,
+            hash,
+            thumbnail_png: Some(thumbnail_png),
+            ..
+        } = &item.entry
+        else {
+            continue;
+        };
+
+        app.thumbnail_handles
+            .entry((*hash, bytes.len()))
+            .or_insert_with(|| ImageHandle::from_bytes(thumbnail_png.clone()));
+    }
 }
 
 fn parse_usize_field(input: &str) -> Result<usize, &'static str> {

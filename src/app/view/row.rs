@@ -63,20 +63,12 @@ impl RowRenderState {
                 mime,
                 bytes,
                 hash,
-                thumbnail_png,
+                thumbnail_png: _,
             } => RowContent::Image {
                 mime: mime.clone(),
                 bytes_len: bytes.len(),
                 content_hash: *hash,
-                thumbnail_handle: app
-                    .thumbnail_handles
-                    .get(&(*hash, bytes.len()))
-                    .cloned()
-                    .or_else(|| {
-                        thumbnail_png
-                            .as_ref()
-                            .map(|png| ImageHandle::from_bytes(png.clone()))
-                    }),
+                thumbnail_handle: app.thumbnail_handles.get(&(*hash, bytes.len())).cloned(),
             },
         };
 
