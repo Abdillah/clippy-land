@@ -1,4 +1,7 @@
-use super::row::{RowRenderState, history_row};
+mod overlay;
+mod settings;
+
+use super::row::{RowContent, RowRenderState, history_row};
 use super::style::{container_on_svg_style, transparent_icon_button_style};
 use super::summary::text_overlay_available;
 use crate::app::{AppModel, Message, icons};
@@ -73,7 +76,6 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         let pinned_count = app.history.iter().filter(|it| it.pinned).count();
 
         for &idx in &visible {
-            // Show divider between pinned and unpinned sections when not filtering
             if app.search_query.is_empty()
                 && idx == pinned_count
                 && pinned_count > 0
@@ -83,7 +85,7 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
             }
 
             let row_state = RowRenderState::from_app(app, idx, &app.history[idx]);
-            if matches!(row_state.content, super::row::RowContent::Image { .. }) {
+            if matches!(row_state.content, RowContent::Image { .. }) {
                 visible_image_count += 1;
             }
             history_column = history_column.push(history_row(row_state));
@@ -109,7 +111,7 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
             widget::container(
                 cosmic::iced::widget::stack([
                     history_scrollable.into(),
-                    text_overlay_layer(text_overlay),
+                    overlay::text_overlay_layer(text_overlay),
                 ])
                 .width(Length::Fill)
                 .height(Length::Fill),
@@ -132,7 +134,7 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     let mut content = widget::column::Column::new().spacing(8).padding([8, 8]);
 
     if app.settings_open {
-        let settings_form = settings_panel(app);
+        let settings_form = settings::settings_panel(app);
         content = content.push(widget::container(settings_form).padding([0, 12]));
     } else {
         if !app.history.is_empty() {
@@ -187,135 +189,4 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     app.note_popup_view_built(visible.len(), visible_image_count, build_started.elapsed());
 
     app.core.applet.popup_container(content).into()
-}
-
-fn text_overlay_layer(text: String) -> Element<'static, Message> {
-    let close_button_icon = widget::icon(icons::named_symbolic_icon("window-close-symbolic"))
-        .class(container_on_svg_style())
-        .size(16);
-
-    let close_button = widget::button::custom(close_button_icon)
-        .class(cosmic::theme::Button::Custom {
-            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            disabled: Box::new(transparent_icon_button_style),
-            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        })
-        .on_press(Message::CloseTextOverlay)
-        .width(Length::Shrink);
-
-    let header = widget::row::Row::new()
-        .align_y(Alignment::Center)
-        .push(widget::text::heading("Text preview"))
-        .push(widget::space().width(Length::Fill))
-        .push(widget::tooltip(
-            close_button,
-            widget::text("Close preview"),
-            widget::tooltip::Position::Top,
-        ));
-
-    cosmic::iced::widget::opaque(
-        widget::container(
-            widget::column::Column::new()
-                .spacing(8)
-                .height(Length::Fill)
-                .push(header)
-                .push(widget::divider::horizontal::default())
-                .push(
-                    widget::scrollable(
-                        widget::container(widget::text::body(text).width(Length::Fill))
-                            .width(Length::Fill),
-                    )
-                    .height(Length::Fill)
-                    .width(Length::Fill),
-                ),
-        )
-        .class(cosmic::theme::Container::Card)
-        .padding([10, 12])
-        .height(Length::Fill)
-        .width(Length::Fill),
-    )
-}
-
-fn settings_panel(app: &AppModel) -> Element<'_, Message> {
-    let mut col = widget::column::Column::new().spacing(8).width(Length::Fill);
-
-    col = col
-        .push(widget::text::heading("Settings"))
-        .push(widget::text::caption("History limits"));
-
-    let history_max = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max history entries"))
-        .push(
-            widget::text_input("e.g. 200", &app.settings_draft.max_history)
-                .on_input(Message::SettingsMaxHistoryChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 30–5000"));
-
-    let pinned_max = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max pinned entries"))
-        .push(
-            widget::text_input("e.g. 20", &app.settings_draft.max_pinned)
-                .on_input(Message::SettingsMaxPinnedChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption(
-            "Allowed range: 0–500 (and ≤ max history)",
-        ));
-
-    col = col.push(
-        widget::row::Row::new()
-            .spacing(8)
-            .push(history_max)
-            .push(pinned_max),
-    );
-
-    col = col.push(widget::divider::horizontal::light());
-    col = col.push(widget::text::caption("Image limits"));
-
-    let image_bytes = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max image size (bytes)"))
-        .push(
-            widget::text_input("e.g. 8388608", &app.settings_draft.max_image_bytes)
-                .on_input(Message::SettingsMaxImageBytesChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 262144–67108864"));
-
-    let image_dimension = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max image dimension (px)"))
-        .push(
-            widget::text_input("e.g. 8192", &app.settings_draft.max_image_dimension_px)
-                .on_input(Message::SettingsMaxImageDimensionChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 512–16384"));
-
-    col = col.push(
-        widget::row::Row::new()
-            .spacing(8)
-            .push(image_bytes)
-            .push(image_dimension),
-    );
-
-    if let Some(err) = &app.settings_error {
-        col = col.push(widget::text::body(err));
-    }
-
-    let apply_row = widget::row::Row::new()
-        .width(Length::Fill)
-        .push(widget::button::suggested("Apply").on_press(Message::ApplySettings));
-
-    col = col.push(apply_row);
-
-    widget::container(col)
-        .class(cosmic::theme::Container::Card)
-        .padding([8, 12])
-        .width(Length::Fill)
-        .into()
 }

@@ -53,6 +53,8 @@ impl cosmic::Application for AppModel {
             settings,
             ..Default::default()
         };
+        icons::prewarm_popup_icons();
+        handlers::prewarm_for_first_popup(&mut app);
         app.recompute_filtered_indices();
 
         if flags.open_popup_on_start {
