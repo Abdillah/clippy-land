@@ -125,6 +125,8 @@ In a terminal, navigate to the directory where you downloaded the .deb file and 
 sudo apt install ./cosmic-applet-clippy-land_<version>_amd64.deb
 ```
 
+The packaged desktop entry now points directly at `/usr/bin/cosmic-applet-clippy-land`, so COSMIC will not accidentally launch an older binary from your `$PATH` during upgrades.
+
 ## Install for Fedora
 
 Thanks to [lorduskordus](https://github.com/lorduskordus) there is now an RPM package on COPR.
@@ -166,6 +168,8 @@ sudo just build
 sudo just install
 ```
 
+`just install` now renders the desktop entry with an absolute `Exec=` path for the chosen prefix, so the applet launcher stays tied to that exact install instead of whichever `cosmic-applet-clippy-land` happens to appear first in `$PATH`.
+
 ## Testing
 
 Use the provided `just` recipes:
@@ -204,6 +208,8 @@ All paths are derived from `prefix`:
 | `<prefix>/share/icons/hicolor/scalable/apps` | app icon                 |
 | `<prefix>/share/metainfo`                    | MetaInfo file            |
 | `<prefix>/share/licenses/<appid>`            | license                  |
+
+If you previously installed Clippy Land under `~/.local` and then switched to the `.deb` or another system install, remove the older user-local install first. Per the desktop entry spec, a user-local desktop file with the same ID overrides the system one, and older applet installs could also leave behind a stale `~/.local/bin/cosmic-applet-clippy-land` binary.
 
 ## Notes
 

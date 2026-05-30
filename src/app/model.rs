@@ -210,6 +210,35 @@ impl AppModel {
         trace.opened_logged = true;
     }
 
+    pub(super) fn note_popup_stage_duration(&self, label: &'static str, stage_elapsed: Duration) {
+        let trace_slot = self.popup_open_trace.borrow();
+        let Some(trace) = trace_slot.as_ref() else {
+            return;
+        };
+
+        popup_timing_log(format!(
+            "popup stage via {}: {} at {:.2}ms (stage={:.2}ms)",
+            trace.source,
+            label,
+            duration_ms(trace.started_at.elapsed()),
+            duration_ms(stage_elapsed)
+        ));
+    }
+
+    pub(super) fn note_popup_stage_marker(&self, label: &'static str) {
+        let trace_slot = self.popup_open_trace.borrow();
+        let Some(trace) = trace_slot.as_ref() else {
+            return;
+        };
+
+        popup_timing_log(format!(
+            "popup stage via {}: {} at {:.2}ms",
+            trace.source,
+            label,
+            duration_ms(trace.started_at.elapsed())
+        ));
+    }
+
     pub(super) fn finish_popup_open_trace_on_redraw(&self) {
         let Some(trace) = self.popup_open_trace.borrow_mut().take() else {
             return;

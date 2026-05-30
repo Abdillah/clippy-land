@@ -1,6 +1,6 @@
 use super::style::{
-    accent_icon_button_style, highlight_history_target, pressed_entry_button_style,
-    transparent_entry_button_style, transparent_icon_button_style,
+    accent_icon_button_style, accent_svg_style, container_on_svg_style, highlight_history_target,
+    pressed_entry_button_style, transparent_entry_button_style, transparent_icon_button_style,
 };
 use super::summary::{
     EXPANDED_MAX_CHARS, summarize_one_line, summarize_one_line_with_limit, text_overlay_available,
@@ -202,32 +202,36 @@ pub(super) fn history_row(state: RowRenderState) -> Element<'static, Message> {
         }
     };
 
-    let pin_button = widget::button::icon(if state.pinned {
+    let pin_icon = widget::icon(if state.pinned {
         icons::pin_icon_pinned()
     } else {
         icons::pin_icon()
     })
-    .class(pin_button_class)
-    .tooltip(if state.pinned {
-        fl!("unpin")
+    .class(if state.pinned {
+        accent_svg_style()
     } else {
-        fl!("pin")
+        container_on_svg_style()
     })
-    .on_press(Message::TogglePin(state.idx))
-    .extra_small()
-    .width(Length::Shrink);
+    .size(16);
 
-    let remove_button = widget::button::icon(icons::remove_icon())
-        .class(cosmic::theme::Button::Custom {
-            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            disabled: Box::new(transparent_icon_button_style),
-            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        })
-        .tooltip(fl!("remove"))
-        .on_press(Message::RemoveHistory(state.idx))
-        .extra_small()
+    let pin_button = widget::button::custom(pin_icon)
+        .class(pin_button_class)
+        .on_press(Message::TogglePin(state.idx))
         .width(Length::Shrink);
+
+    let remove_button = widget::button::custom(
+        widget::icon(icons::remove_icon())
+            .class(container_on_svg_style())
+            .size(16),
+    )
+    .class(cosmic::theme::Button::Custom {
+        active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        disabled: Box::new(transparent_icon_button_style),
+        hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+    })
+    .on_press(Message::RemoveHistory(state.idx))
+    .width(Length::Shrink);
 
     let pin_active = state.row_keyboard_focus == Some(FocusPart::Pin)
         || state.hovered_focus == Some(FocusPart::Pin);
@@ -237,13 +241,29 @@ pub(super) fn history_row(state: RowRenderState) -> Element<'static, Message> {
     let remove_active = state.row_keyboard_focus == Some(FocusPart::Remove)
         || state.hovered_focus == Some(FocusPart::Remove);
 
-    let pin_button_elem =
-        widget::mouse_area(highlight_history_target(pin_button.into(), pin_active))
-            .on_enter(Message::HoverEntry(Some((state.idx, FocusPart::Pin))))
-            .on_exit(Message::HoverEntry(Some((state.idx, FocusPart::Entry))));
+    let pin_button_elem = widget::mouse_area(highlight_history_target(
+        widget::tooltip(
+            pin_button,
+            widget::text(if state.pinned {
+                fl!("unpin")
+            } else {
+                fl!("pin")
+            }),
+            widget::tooltip::Position::Top,
+        )
+        .into(),
+        pin_active,
+    ))
+    .on_enter(Message::HoverEntry(Some((state.idx, FocusPart::Pin))))
+    .on_exit(Message::HoverEntry(Some((state.idx, FocusPart::Entry))));
 
     let remove_button_elem = widget::mouse_area(highlight_history_target(
-        remove_button.into(),
+        widget::tooltip(
+            remove_button,
+            widget::text(fl!("remove")),
+            widget::tooltip::Position::Top,
+        )
+        .into(),
         remove_active,
     ))
     .on_enter(Message::HoverEntry(Some((state.idx, FocusPart::Remove))))
@@ -260,21 +280,27 @@ pub(super) fn history_row(state: RowRenderState) -> Element<'static, Message> {
             ..
         }
     ) {
-        let preview_button =
-            widget::button::icon(widget::icon::from_name("system-search-symbolic"))
-                .class(cosmic::theme::Button::Custom {
-                    active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-                    disabled: Box::new(transparent_icon_button_style),
-                    hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-                    pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-                })
-                .tooltip("Preview full text")
-                .on_press(Message::OpenTextOverlay(state.idx))
-                .extra_small()
-                .width(Length::Shrink);
+        let preview_button = widget::button::custom(
+            widget::icon(icons::named_symbolic_icon("system-search-symbolic"))
+                .class(container_on_svg_style())
+                .size(16),
+        )
+        .class(cosmic::theme::Button::Custom {
+            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            disabled: Box::new(transparent_icon_button_style),
+            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        })
+        .on_press(Message::OpenTextOverlay(state.idx))
+        .width(Length::Shrink);
 
         let preview_button_elem = widget::mouse_area(highlight_history_target(
-            preview_button.into(),
+            widget::tooltip(
+                preview_button,
+                widget::text("Preview full text"),
+                widget::tooltip::Position::Top,
+            )
+            .into(),
             preview_active,
         ))
         .on_enter(Message::HoverEntry(Some((state.idx, FocusPart::Preview))))

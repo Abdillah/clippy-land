@@ -4,6 +4,10 @@ fn symbolic_icon(name: &str) -> widget::icon::Handle {
     widget::icon::from_name(name).handle()
 }
 
+pub fn named_symbolic_icon(name: &str) -> widget::icon::Handle {
+    symbolic_icon(name)
+}
+
 pub fn remove_icon() -> widget::icon::Handle {
     symbolic_icon("edit-delete-symbolic")
 }

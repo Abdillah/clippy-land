@@ -26,7 +26,7 @@ build-release *args:
 install:
     install -Dm755 target/release/{{name}}          {{bin_dir}}/{{name}}
     install -Dm755 resources/{{name}}.sh            {{bin_dir}}/{{name}}.sh
-    install -Dm644 resources/{{appid}}.desktop      {{app_dir}}/{{appid}}.desktop
+    sh scripts/render-desktop-entry.sh resources/{{appid}}.desktop "{{bin_dir}}/{{name}}" "{{app_dir}}/{{appid}}.desktop"
     install -Dm644 resources/{{appid}}.metainfo.xml {{metainfo_dir}}/{{appid}}.metainfo.xml
     install -Dm644 resources/icon.svg               {{icon_dir}}/{{appid}}.svg
     install -Dm644 resources/icon.svg               {{icon_dir}}/{{appid}}-symbolic.svg

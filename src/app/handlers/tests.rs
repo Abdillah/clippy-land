@@ -808,6 +808,11 @@ fn popup_closed_cancels_pending_popup_open_trace() {
     assert!(!app.popup_open_trace_pending_for_test());
 }
 
+#[test]
+fn popup_size_hint_matches_popup_layout_constraints() {
+    assert_eq!(super::update::popup_size_hint(), (360, 400));
+}
+
 // ── WindowUnfocused ──────────────────────────────────────────────────────────
 
 #[test]

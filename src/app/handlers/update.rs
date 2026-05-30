@@ -13,6 +13,14 @@ use cosmic::iced::platform_specific::shell::wayland::commands::popup::{destroy_p
 use cosmic::iced::runtime::platform_specific::wayland::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::widget::image::Handle as ImageHandle;
 use cosmic::prelude::*;
+use std::time::Instant;
+
+const POPUP_WIDTH_HINT: u32 = 360;
+const POPUP_HEIGHT_HINT: u32 = 400;
+
+pub(super) const fn popup_size_hint() -> (u32, u32) {
+    (POPUP_WIDTH_HINT, POPUP_HEIGHT_HINT)
+}
 
 pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Message>> {
     match message {
@@ -370,18 +378,24 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                     destroy_popup(p)
                 }
             } else {
-                warm_thumbnail_handles(app);
                 app.begin_popup_open_trace("icon-click");
+                let warm_started = Instant::now();
+                warm_thumbnail_handles(app);
+                app.note_popup_stage_duration(
+                    "warm_thumbnail_handles complete",
+                    warm_started.elapsed(),
+                );
                 let new_id = cosmic::iced::window::Id::unique();
                 app.popup.replace(new_id);
                 app.popup_is_layer_surface = false;
                 let popup_settings = app.core.applet.get_popup_settings(
                     app.core.main_window_id().unwrap(),
                     new_id,
-                    None,
+                    Some(popup_size_hint()),
                     None,
                     None,
                 );
+                app.note_popup_stage_marker("issuing get_popup request");
                 get_popup(popup_settings)
             };
         }
@@ -400,11 +414,17 @@ pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Actio
                     destroy_popup(p)
                 }
             } else {
-                warm_thumbnail_handles(app);
                 app.begin_popup_open_trace("ipc-toggle");
+                let warm_started = Instant::now();
+                warm_thumbnail_handles(app);
+                app.note_popup_stage_duration(
+                    "warm_thumbnail_handles complete",
+                    warm_started.elapsed(),
+                );
                 let new_id = cosmic::iced::window::Id::unique();
                 app.popup.replace(new_id);
                 app.popup_is_layer_surface = true;
+                app.note_popup_stage_marker("issuing get_layer_surface request");
                 get_layer_surface(SctkLayerSurfaceSettings {
                     id: new_id,
                     keyboard_interactivity: KeyboardInteractivity::OnDemand,

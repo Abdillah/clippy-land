@@ -1,4 +1,5 @@
 use super::row::{RowRenderState, history_row};
+use super::style::{container_on_svg_style, transparent_icon_button_style};
 use super::summary::text_overlay_available;
 use crate::app::{AppModel, Message, icons};
 use crate::fl;
@@ -145,17 +146,29 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         .spacing(8)
         .align_y(Alignment::Center);
 
-    let settings_button =
-        widget::button::icon(widget::icon::from_name("preferences-system-symbolic"))
-            .tooltip(if app.settings_open {
-                "Close settings"
-            } else {
-                "Settings"
-            })
-            .on_press(Message::ToggleSettingsPanel)
-            .extra_small()
-            .width(Length::Shrink);
-    controls = controls.push(settings_button);
+    let settings_button_icon =
+        widget::icon(icons::named_symbolic_icon("preferences-system-symbolic"))
+            .class(container_on_svg_style())
+            .size(16);
+
+    let settings_button = widget::button::custom(settings_button_icon)
+        .class(cosmic::theme::Button::Custom {
+            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            disabled: Box::new(transparent_icon_button_style),
+            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        })
+        .on_press(Message::ToggleSettingsPanel)
+        .width(Length::Shrink);
+    controls = controls.push(widget::tooltip(
+        settings_button,
+        widget::text(if app.settings_open {
+            "Close settings"
+        } else {
+            "Settings"
+        }),
+        widget::tooltip::Position::Top,
+    ));
 
     controls = controls.push(widget::space().width(Length::Fill));
 
@@ -177,17 +190,29 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
 }
 
 fn text_overlay_layer(text: String) -> Element<'static, Message> {
-    let close_button = widget::button::icon(widget::icon::from_name("window-close-symbolic"))
-        .tooltip("Close preview")
+    let close_button_icon = widget::icon(icons::named_symbolic_icon("window-close-symbolic"))
+        .class(container_on_svg_style())
+        .size(16);
+
+    let close_button = widget::button::custom(close_button_icon)
+        .class(cosmic::theme::Button::Custom {
+            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            disabled: Box::new(transparent_icon_button_style),
+            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+        })
         .on_press(Message::CloseTextOverlay)
-        .extra_small()
         .width(Length::Shrink);
 
     let header = widget::row::Row::new()
         .align_y(Alignment::Center)
         .push(widget::text::heading("Text preview"))
         .push(widget::space().width(Length::Fill))
-        .push(close_button);
+        .push(widget::tooltip(
+            close_button,
+            widget::text("Close preview"),
+            widget::tooltip::Position::Top,
+        ));
 
     cosmic::iced::widget::opaque(
         widget::container(
