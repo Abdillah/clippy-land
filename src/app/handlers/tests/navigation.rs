@@ -62,6 +62,21 @@ fn close_text_overlay_message_clears_overlay_index() {
 }
 
 #[test]
+fn close_text_overlay_message_closes_overlay_without_closing_popup() {
+    let mut app = AppModel::default();
+    let popup_id = cosmic::iced::window::Id::unique();
+    app.popup = Some(popup_id);
+    app.history
+        .push_back(text_item("first line\nsecond line", false));
+    app.text_overlay_index = Some(0);
+
+    dispatch(&mut app, Message::CloseTextOverlay);
+
+    assert_eq!(app.popup, Some(popup_id));
+    assert!(app.text_overlay_index.is_none());
+}
+
+#[test]
 fn close_text_overlay_message_is_noop_when_overlay_not_open() {
     let mut app = AppModel::default();
     app.history.push_back(text_item("overlay text", false));
