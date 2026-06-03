@@ -1,4 +1,5 @@
 use super::*;
+use crate::app::model::PopupSurface;
 
 #[test]
 fn move_selection_down_steps_through_filtered_indices() {
@@ -90,11 +91,12 @@ fn escape_pressed_closes_popup_when_overlay_not_open() {
     let mut app = AppModel::default();
     let popup_id = cosmic::iced::window::Id::unique();
     app.popup = Some(popup_id);
-    app.popup_is_layer_surface = true;
+    app.popup_surface = Some(PopupSurface::AnchoredPopup);
 
     dispatch(&mut app, Message::EscapePressed);
 
     assert!(app.popup.is_none());
+    assert!(app.popup_surface.is_none());
 }
 
 #[test]

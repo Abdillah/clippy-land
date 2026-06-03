@@ -22,6 +22,10 @@ mkdir -p deb_build/DEBIAN \
 # Copy files
 cp target/release/$NAME deb_build/usr/bin/
 chmod 755 deb_build/usr/bin/$NAME
+sh scripts/render-debug-wrapper.sh \
+    resources/$NAME-debug.sh.in \
+    "/usr/bin/$NAME" \
+    deb_build/usr/bin/$NAME-debug.sh
 sh scripts/render-desktop-entry.sh \
     resources/$APPID.desktop \
     "/usr/bin/$NAME" \

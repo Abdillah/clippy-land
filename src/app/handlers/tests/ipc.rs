@@ -50,3 +50,41 @@ fn ipc_signal_path_prefers_override_env_var() {
         std::path::PathBuf::from("/tmp/clippy-land-test-signal")
     );
 }
+
+#[test]
+fn ipc_signal_payload_parser_accepts_millisecond_timestamp() {
+    let parsed = crate::ipc::parse_signal_timestamp_ms_for_test("123456789");
+    assert_eq!(parsed, Some(123456789));
+
+    let invalid = crate::ipc::parse_signal_timestamp_ms_for_test("not-a-timestamp");
+    assert_eq!(invalid, None);
+}
+
+#[test]
+fn send_toggle_signal_writes_parseable_timestamp_payload() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be after unix epoch")
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("clippy-land-signal-{unique}"));
+
+    unsafe {
+        std::env::set_var("CLIPPY_LAND_SIGNAL_FILE", &path);
+    }
+
+    crate::ipc::send_toggle_signal().expect("toggle signal should be written");
+
+    let payload = std::fs::read_to_string(&path).expect("signal payload should be readable");
+    let parsed = crate::ipc::parse_signal_timestamp_ms_for_test(payload.trim());
+    assert!(
+        parsed.is_some(),
+        "payload should contain a millisecond timestamp"
+    );
+
+    let _ = std::fs::remove_file(&path);
+    unsafe {
+        std::env::remove_var("CLIPPY_LAND_SIGNAL_FILE");
+    }
+}

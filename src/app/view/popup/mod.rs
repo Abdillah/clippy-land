@@ -15,7 +15,7 @@ pub(super) fn view(app: &AppModel) -> Element<'_, Message> {
     app.core
         .applet
         .icon_button("edit-copy-symbolic")
-        .on_press(Message::TogglePopup)
+        .on_press_down(Message::TogglePopup)
         .into()
 }
 
@@ -144,47 +144,78 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         content = content.push(history_area);
     };
 
-    let mut controls = widget::row::Row::new()
+    let mut left_controls = widget::row::Row::new()
         .spacing(8)
         .align_y(Alignment::Center);
+    let mut right_controls = widget::row::Row::new()
+        .spacing(8)
+        .align_y(Alignment::Center);
+    let mut has_left_controls = false;
+    let mut has_right_controls = false;
 
-    let settings_button_icon =
-        widget::icon(icons::named_symbolic_icon("preferences-system-symbolic"))
-            .class(container_on_svg_style())
-            .size(16);
+    if app.popup_controls_ready {
+        let settings_button_icon =
+            widget::icon(icons::named_symbolic_icon("preferences-system-symbolic"))
+                .class(container_on_svg_style())
+                .size(16);
 
-    let settings_button = widget::button::custom(settings_button_icon)
-        .class(cosmic::theme::Button::Custom {
-            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            disabled: Box::new(transparent_icon_button_style),
-            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        })
-        .on_press(Message::ToggleSettingsPanel)
-        .width(Length::Shrink);
-    controls = controls.push(widget::tooltip(
-        settings_button,
-        widget::text(if app.settings_open {
-            "Close settings"
-        } else {
-            "Settings"
-        }),
-        widget::tooltip::Position::Top,
-    ));
-
-    controls = controls.push(widget::space().width(Length::Fill));
+        let settings_button = widget::button::custom(settings_button_icon)
+            .class(cosmic::theme::Button::Custom {
+                active: Box::new(|_, theme| transparent_icon_button_style(theme)),
+                disabled: Box::new(transparent_icon_button_style),
+                hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
+                pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
+            })
+            .on_press(Message::ToggleSettingsPanel)
+            .width(Length::Shrink);
+        left_controls = left_controls.push(widget::tooltip(
+            settings_button,
+            widget::text(if app.settings_open {
+                "Close settings"
+            } else {
+                "Settings"
+            }),
+            widget::tooltip::Position::Top,
+        ));
+        has_left_controls = true;
+    }
 
     if !app.history.is_empty() && app.search_query.is_empty() {
         let delete_all_button = widget::button::destructive(fl!("delete-all"))
             .leading_icon(icons::remove_icon())
             .on_press(Message::ClearHistory);
-        controls = controls.push(delete_all_button);
+        right_controls = right_controls.push(delete_all_button);
+        has_right_controls = true;
     }
 
-    let controls_sheet = widget::container(controls)
-        .padding([8, 8])
-        .width(Length::Fill);
-    content = content.push(controls_sheet);
+    if has_left_controls || has_right_controls {
+        let mut controls_sheet = widget::row::Row::new()
+            .width(Length::Fill)
+            .align_y(Alignment::Center);
+
+        if has_left_controls {
+            controls_sheet = controls_sheet.push(
+                widget::container(left_controls)
+                    .width(Length::Fill)
+                    .align_x(Alignment::Start),
+            );
+        } else {
+            controls_sheet = controls_sheet.push(widget::space().width(Length::Fill));
+        }
+
+        if has_right_controls {
+            controls_sheet = controls_sheet.push(
+                widget::container(right_controls)
+                    .width(Length::Fill)
+                    .align_x(Alignment::End),
+            );
+        }
+
+        let controls_sheet = widget::container(controls_sheet)
+            .padding([8, 8])
+            .width(Length::Fill);
+        content = content.push(controls_sheet);
+    }
 
     app.note_popup_view_built(visible.len(), visible_image_count, build_started.elapsed());
 

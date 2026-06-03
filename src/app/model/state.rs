@@ -19,8 +19,10 @@ pub struct AppModel {
     pub(in crate::app) core: cosmic::Core,
     pub(in crate::app) settings: AppSettings,
     pub(in crate::app) popup: Option<Id>,
-    /// True when the popup was opened via IPC (layer surface), false for icon click (XDG popup).
-    pub(in crate::app) popup_is_layer_surface: bool,
+    pub(in crate::app) popup_surface: Option<PopupSurface>,
+    /// False during initial popup mapping so non-essential footer controls can be revealed
+    /// only after the popup has actually opened.
+    pub(in crate::app) popup_controls_ready: bool,
     /// Current search query for filtering clipboard history.
     pub(in crate::app) search_query: String,
     /// Whether settings panel is visible inside popup.
@@ -79,6 +81,12 @@ pub enum FocusPart {
     Preview,
     Pin,
     Remove,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::app) enum PopupSurface {
+    AnchoredPopup,
+    LayerSurface,
 }
 
 impl AppModel {
