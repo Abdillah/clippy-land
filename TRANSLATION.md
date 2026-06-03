@@ -90,3 +90,46 @@ Suggested PR description:
 - `i18n.toml`
 - `i18n/en/cosmic_applet_clippy_land.ftl`
 - `src/i18n.rs`
+
+## Updating the Description on Cosmic Store
+
+The Cosmic Store displays the applet description and summaries using metadata from `resources/io.github.k33wee.clippy-land.metainfo.xml`.
+
+### Where to edit
+- The main applet description for the store is in the `<description>` block of the XML file. Each language uses an XML language tag, e.g.:
+  - `<p>` (English, default)
+  - `<p xml:lang="cs">` (Czech)
+  - `<p xml:lang="it">` (Italian), etc.
+- The short summary under `<summary>` at the top should also include translations, e.g. `<summary xml:lang="cs">...`.
+- You can add or update language-specific blocks just as you would for application strings. Always use the appropriate `xml:lang` attribute for each language.
+
+### How to update
+1. Edit (or add) the `<summary>`, `<description>`, and any feature lists for your language by copying the English text and translating it inside the `<summary xml:lang="xx">` or `<p xml:lang="xx">` blocks.
+2. For best results, keep non-translated versions (English) at the top and add/maintain language-specific tags directly beneath for each supported language.
+3. For feature lists, you may add `<li xml:lang="xx">` inside `<ul>`, following the same structure as existing translations.
+4. If adding new language translations, make sure to reflect your changes under both `<summary>` and inside the appropriate `<p xml:lang="xx">` sections in the `<description>`.
+5. Only edit or add translations for languages you are confident in. Avoid machine translation unless reviewed by a human speaker.
+
+### Validation and Submission
+- After editing, ensure the XML remains valid and well-formed (no duplicate language blocks, every opening tag closed, only one default (English) block per section).
+- Validate by building your package and checking how the description appears in the Cosmic Store (or review with Flatpak/Flathub tools for metadata validation).
+- Commit and open a Pull Request with a clear note indicating which languages/descriptions were added or updated in the store metadata.
+
+### When are changes reflected?
+- Changes are picked up after new releases/bundles are created and published to the store. Make sure to merge to the main branch and include release notes for high-visibility updates.
+
+### Example snippet
+```xml
+<summary>Clipboard history for COSMIC panel</summary>
+<summary xml:lang="pl">Historia schowka dla panelu COSMIC</summary>
+...
+<description>
+  <p>Clippy Land is a COSMIC panel applet that keeps a history of recently copied text and images.</p>
+  <p xml:lang="pl">Clippy Land to aplet panelu COSMIC, który przechowuje historię ostatnio kopiowanych tekstów i obrazków.</p>
+  ...
+</description>
+```
+
+For further reference or details on translation/localization structure, see:
+- [`resources/io.github.k33wee.clippy-land.metainfo.xml`](resources/io.github.k33wee.clippy-land.metainfo.xml)
+- [Flatpak/Flathub AppStream documentation](https://docs.flatpak.org/en/latest/metadata.html)
