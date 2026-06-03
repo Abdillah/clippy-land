@@ -40,11 +40,10 @@ the contents change.
 - [Install for Debian/Ubuntu](#install-for-debianubuntu)
 - [Install for Fedora](#install-for-fedora)
 - [Build/Install with just](#buildinstall-with-just)
-- [Collect panel debug logs](#collect-panel-debug-logs)
 - [Testing](#testing)
 - [Install with custom paths](#install-with-custom-paths)
+- [Contributing docs](#contributing-docs)
 - [Notes](#notes)
-- [Translations](#translations)
 
 ## Cosmic Store
 
@@ -171,61 +170,6 @@ sudo just install
 
 `just install` now renders the desktop entry with an absolute `Exec=` path for the chosen prefix, so the applet launcher stays tied to that exact install instead of whichever `cosmic-applet-clippy-land` happens to appear first in `$PATH`.
 
-## Collect panel debug logs
-
-Clippy Land now ships a debug wrapper that enables `CLIPPY_LAND_DEBUG_TIMING=1` and appends panel-spawned applet logs to a file.
-
-Default log path:
-
-```bash
-${XDG_STATE_HOME:-$HOME/.local/state}/clippy-land/panel-debug.log
-```
-
-For source/custom-path installs, you can switch the installed desktop entry to the wrapper with:
-
-```bash
-# example for a user-local install
-just prefix="$HOME/.local" enable-debug-wrapper
-
-# restart COSMIC panel so the applet respawns through the wrapper
-pkill -9 cosmic-panel
-```
-
-To go back to the normal launcher later:
-
-```bash
-just prefix="$HOME/.local" disable-debug-wrapper
-pkill -9 cosmic-panel
-```
-
-For native package installs (`.deb`, RPM, etc.), the wrapper is installed alongside the binary as:
-
-```bash
-/usr/bin/cosmic-applet-clippy-land-debug.sh
-```
-
-To enable it, copy the desktop entry to `~/.local/share/applications/io.github.k33wee.clippy-land.desktop`, change `Exec=` to that wrapper path, then restart `cosmic-panel`.
-
-For Flatpak installs, the wrapper is available inside the sandbox as:
-
-```bash
-flatpak run --command=cosmic-applet-clippy-land-debug.sh io.github.k33wee.clippy-land
-```
-
-To make the panel applet use it, create a user-local desktop-entry override with:
-
-```bash
-Exec=flatpak run --command=cosmic-applet-clippy-land-debug.sh io.github.k33wee.clippy-land
-```
-
-Useful lines in the log file include:
-
-- `ipc toggle signal written ...`
-- `ipc toggle signal detected after ...`
-- `ipc toggle message delivered to applet`
-- `popup requested via ...`
-- `popup window opened via ...`
-
 ## Testing
 
 Use the provided `just` recipes:
@@ -242,6 +186,11 @@ just e2e
 ```
 
 E2E tests require a Wayland session and helper tools such as `wl-copy`, `wl-paste`, and `wtype`.
+
+## Contributing docs
+
+- For issue reporting and panel-log collection, see [DEBUGGING.md](./DEBUGGING.md).
+- For adding or updating translations, see [TRANSLATION.md](./TRANSLATION.md).
 
 ## Install with custom paths
 
@@ -270,19 +219,8 @@ If you previously installed Clippy Land under `~/.local` and then switched to th
 ## Notes
 
 - App ID is currently `io.github.k33wee.clippy-land`.
+- Debug wrapper log path defaults to `${XDG_STATE_HOME:-$HOME/.local/state}/clippy-land/panel-debug.log`.
 
 ## Attribution
 
 - "Cosmic Icons" by System76 is licensed under CC-SA-4.0
-
-## Translations
-
-Clippy Land is available in the following languages, thanks to:
-
-- **English** ([k33wee](https://github.com/k33wee))
-- **Italian** ([k33wee](https://github.com/k33wee))
-- **Portuguese** ([GuilhermeTerriaga](https://github.com/GuilhermeTerriaga))
-- **Czech** ([lorduskordus](https://github.com/lorduskordus))
-- **Ukrainian** ([Dymkom](https://github.com/Dymkom))
-- **Swedish** ([bittin](https://github.com/bittin))
-- **French** ([Thovi98](https://github.com/Thovi98))
