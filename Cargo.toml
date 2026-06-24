@@ -22,23 +22,13 @@ features = ["fluent-system", "desktop-requester"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic.git"
+default-features = false
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 features = [
-    # Applet support
-    "applet",
+    # COSMIC applet support. This pulls in the Wayland/winit/tokio/multi-window pieces needed by applets.
     "applet-token",
     # Uses cosmic-settings-daemon to watch for config file changes
     "dbus-config",
-    # Support creating additional application windows.
-    "multi-window",
-    # Uses tokio as the executor for the runtime
-    "tokio",
-    # Add Wayland support to winit
-    "wayland",
-    # Enable wgpu renderer path (iced fallback compositor can then prefer wgpu)
-    "wgpu",
-    # Windowing support for X11, Windows, Mac, & Redox
-    "winit",
 ]
 
 # Uncomment to test a locally-cloned libcosmic

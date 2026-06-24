@@ -9,7 +9,6 @@
   "command": "cosmic-applet-clippy-land.sh",
   "finish-args": [
     "--share=ipc",
-    "--device=dri",
     "--socket=wayland",
     "--socket=fallback-x11",
     "--filesystem=/run/user",
