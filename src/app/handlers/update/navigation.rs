@@ -1,7 +1,7 @@
 use super::shared::{prune_thumbnail_handles, row_has_preview};
 use crate::app::model::FocusPart;
 use crate::app::view::filtered_indices;
-use crate::app::{AppModel, Message};
+use crate::app::{AppModel, Message, pinned_history};
 
 use super::super::{history, scroll};
 use cosmic::prelude::*;
@@ -136,13 +136,19 @@ pub(super) fn handle(
                         }
                     }
                     FocusPart::Pin => {
-                        history::toggle_pin(&mut app.history, idx, &app.settings);
+                        if history::toggle_pin(&mut app.history, idx, &app.settings) {
+                            pinned_history::save(&app.history);
+                        }
                         app.recompute_filtered_indices();
                     }
                     FocusPart::Remove => {
-                        let _ = app.history.remove(idx);
+                        let removed_pinned =
+                            app.history.remove(idx).is_some_and(|item| item.pinned);
                         prune_thumbnail_handles(app);
                         app.recompute_filtered_indices();
+                        if removed_pinned {
+                            pinned_history::save(&app.history);
+                        }
                     }
                 }
             } else if let Some(idx) = app.hovered_index {

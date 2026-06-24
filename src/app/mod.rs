@@ -2,6 +2,7 @@ mod handlers;
 mod icons;
 mod messages;
 mod model;
+mod pinned_history;
 mod view;
 
 pub use messages::Message;
@@ -83,6 +84,14 @@ impl cosmic::Application for AppModel {
             settings,
             ..Default::default()
         };
+
+        let stage_started = Instant::now();
+        app.history = pinned_history::load(&app.settings);
+        init_timing_log(
+            "pinned history loaded",
+            init_started,
+            stage_started.elapsed(),
+        );
 
         let stage_started = Instant::now();
         icons::prewarm_popup_icons();

@@ -163,10 +163,13 @@ sudo apt install cargo cmake just libexpat1-dev libfontconfig-dev libfreetype-de
 
 ```bash
 # build
-sudo just build
+just build
 
-# install for current user
+# install system-wide under /usr
 sudo just install
+
+# uninstall the system-wide source install
+sudo just uninstall
 ```
 
 `just install` now renders the desktop entry with an absolute `Exec=` path for the chosen prefix, so the applet launcher stays tied to that exact install instead of whichever `cosmic-applet-clippy-land` happens to appear first in `$PATH`.
@@ -198,12 +201,17 @@ E2E tests require a Wayland session and helper tools such as `wl-copy`, `wl-past
 Pass a `prefix` variable to install everything under a custom root:
 
 ```bash
-# install under ~/.local  (default is /usr)
-sudo just prefix=~/.local install
+# install under ~/.local for the current user without sudo
+just prefix="$HOME/.local" install
 
-# uninstall
-sudo just prefix=~/.local uninstall
+# uninstall the current user's ~/.local source install
+just uninstall-user
+
+# equivalent explicit form
+just prefix="$HOME/.local" uninstall
 ```
+
+If an older user-local install was created with `sudo just prefix=~/.local install`, its files may be owned by root. Remove that old root-owned local install once with `sudo just prefix="$HOME/.local" uninstall`, then use the non-sudo `~/.local` commands above for future user-local installs.
 
 All paths are derived from `prefix`:
 
@@ -215,7 +223,7 @@ All paths are derived from `prefix`:
 | `<prefix>/share/metainfo`                    | MetaInfo file            |
 | `<prefix>/share/licenses/<appid>`            | license                  |
 
-If you previously installed Clippy Land under `~/.local` and then switched to the `.deb` or another system install, remove the older user-local install first. Per the desktop entry spec, a user-local desktop file with the same ID overrides the system one, and older applet installs could also leave behind a stale `~/.local/bin/cosmic-applet-clippy-land` binary.
+If you previously installed Clippy Land under `~/.local` and then switched to the `.deb` or another system install, remove the older user-local install first with `just uninstall-user`. Per the desktop entry spec, a user-local desktop file with the same ID overrides the system one, and older applet installs could also leave behind a stale `~/.local/bin/cosmic-applet-clippy-land` binary.
 
 ## Notes
 
