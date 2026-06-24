@@ -15,8 +15,8 @@ the contents change.
 - Keep a history of recent clipboard entries (text + images), with configurable limits
 - Re-copy an entry with a single click
 - Remove individual entries from the history
-- Clear all entries from history with one click
-- Pin important entries to the top of the history (configurable pin limit)
+- Clear unpinned history entries with one click while keeping pinned entries saved
+- Pin important entries to the top of the history; pinned entries persist across app restarts (configurable pin limit)
 - In-popup **Settings** panel to adjust limits and apply them immediately:
   - max history entries
   - max pinned entries
@@ -99,6 +99,10 @@ By default, Clippy Land starts with:
 - `max_image_dimension_px = 8192`
 
 Config is stored at `~/.config/clippy-land/config.toml` (or `$XDG_CONFIG_HOME/clippy-land/config.toml`), and can be overridden with `CLIPPY_LAND_CONFIG`.
+
+Pinned clipboard entries are stored separately as app state so they survive app restarts and reboots. Only pinned entries are persisted; unpinned clipboard history remains runtime-only. Text pins are saved in a small TOML manifest, while pinned images store metadata in the manifest and image/thumbnail blobs beside it. By default, pinned history is stored at `$XDG_STATE_HOME/clippy-land/pinned-history.toml` or `~/.local/state/clippy-land/pinned-history.toml`, and can be overridden with `CLIPPY_LAND_PINNED_HISTORY`.
+
+The **Clear History** action removes only unpinned entries. To remove a pinned entry, unpin it or delete that entry directly.
 
 ## Install with Flatpak
 
