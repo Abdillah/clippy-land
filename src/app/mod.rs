@@ -27,6 +27,10 @@ pub(super) fn history_scroll_id() -> cosmic::iced::core::widget::Id {
     cosmic::iced::core::widget::Id::new("history-scroll")
 }
 
+pub(super) fn text_overlay_scroll_id() -> cosmic::iced::core::widget::Id {
+    cosmic::iced::core::widget::Id::new("text-overlay-scroll")
+}
+
 pub(in crate::app) fn history_layer_surface_settings(id: Id) -> SctkLayerSurfaceSettings {
     SctkLayerSurfaceSettings {
         id,

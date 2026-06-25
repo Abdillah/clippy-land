@@ -32,7 +32,13 @@ pub(super) fn handle(
             app.history_viewport = Some(viewport);
             Some(Task::none())
         }
-        Message::MoveSelectionUp => {
+        Message::KeyboardNavigateUp if app.text_overlay_index.is_some() => {
+            Some(scroll::scroll_text_overlay_up())
+        }
+        Message::KeyboardNavigateDown if app.text_overlay_index.is_some() => {
+            Some(scroll::scroll_text_overlay_down())
+        }
+        Message::KeyboardNavigateUp => {
             let visible = filtered_indices(app);
             if visible.is_empty() {
                 return Some(Task::none());
@@ -50,7 +56,7 @@ pub(super) fn handle(
             app.at_scroll_bottom = false;
             Some(scroll::scroll_selection_into_view(app, new_idx))
         }
-        Message::MoveSelectionDown => {
+        Message::KeyboardNavigateDown => {
             let visible = filtered_indices(app);
             if visible.is_empty() {
                 return Some(Task::none());

@@ -28,6 +28,7 @@ the contents change.
 - Move between entries with keyboard ( **up/down** or **k/j** to navigate rows; **left/right** or **h/l** to move between row actions: copy, preview (when available), pin, delete)
 - Keyboard activation and escape behavior:
   - press **Enter** on the focused action (including text preview lens)
+  - while the text preview overlay is open, use **up/down** or **k/j** to scroll it
   - press **Q** to close the text preview overlay
   - press **Esc** to close the popup
 - Adds keyboard shortcuts for opening the history (see [Usage](#usage) below)
