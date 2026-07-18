@@ -1,5 +1,6 @@
 use super::super::style::{container_on_svg_style, transparent_icon_button_style};
 use crate::app::{Message, icons};
+use cosmic::iced::Font;
 use cosmic::iced::Length;
 use cosmic::prelude::*;
 use cosmic::widget;
@@ -38,8 +39,13 @@ pub(super) fn text_overlay_layer(text: String) -> Element<'static, Message> {
                 .push(widget::divider::horizontal::default())
                 .push(
                     widget::scrollable(
-                        widget::container(widget::text::body(text).width(Length::Fill))
-                            .width(Length::Fill),
+                        widget::container(
+                            widget::text::body(text)
+                                .font(Font::MONOSPACE)
+                                .size(11)
+                                .width(Length::Fill),
+                        )
+                        .width(Length::Fill),
                     )
                     .id(crate::app::text_overlay_scroll_id())
                     .height(Length::Fill)

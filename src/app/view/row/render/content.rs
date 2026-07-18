@@ -1,6 +1,7 @@
 use super::super::RowContent;
 use super::super::state::RowRenderState;
 use crate::app::Message;
+use cosmic::iced::Font;
 use cosmic::iced::Length;
 use cosmic::iced::widget::image::Handle as ImageHandle;
 use cosmic::prelude::*;
@@ -14,7 +15,10 @@ pub(super) fn row_label(state: &RowRenderState, row_expanded: bool) -> Element<'
             collapsed_summary,
             expanded_summary: _,
             overlay_available: _,
-        } => widget::text::body(collapsed_summary.clone()).into(),
+        } => widget::text::body(collapsed_summary.clone())
+            .font(Font::MONOSPACE)
+            .size(11)
+            .into(),
         RowContent::Image {
             mime,
             bytes_len,
