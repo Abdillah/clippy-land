@@ -116,11 +116,12 @@ pub(super) fn message_for_named_key(named: NamedKey) -> Option<Message> {
 
 pub(super) fn message_for_latin_key(ch: char) -> Option<Message> {
     match ch {
-        'j' | 'J' => Some(Message::KeyboardNavigateDown),
-        'k' | 'K' => Some(Message::KeyboardNavigateUp),
+        '/' => Some(Message::FocusSearch),
+        'n' | 'N' => Some(Message::KeyboardNavigateDown),
+        'e' | 'E' => Some(Message::KeyboardNavigateUp),
         'q' | 'Q' => Some(Message::CloseTextOverlay),
         'h' | 'H' => Some(Message::MoveFocusLeft),
-        'l' | 'L' => Some(Message::MoveFocusRight),
+        'i' | 'I' => Some(Message::MoveFocusRight),
         '\n' | '\r' => Some(Message::ActivateSelection),
         _ => None,
     }

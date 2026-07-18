@@ -98,11 +98,11 @@ fn vertical_navigation_keys_emit_keyboard_navigation_intents() {
         Some(Message::KeyboardNavigateUp)
     ));
     assert!(matches!(
-        message_for_latin_key('j'),
+        message_for_latin_key('n'),
         Some(Message::KeyboardNavigateDown)
     ));
     assert!(matches!(
-        message_for_latin_key('k'),
+        message_for_latin_key('e'),
         Some(Message::KeyboardNavigateUp)
     ));
 }
@@ -110,11 +110,11 @@ fn vertical_navigation_keys_emit_keyboard_navigation_intents() {
 #[test]
 fn uppercase_vim_navigation_keys_emit_keyboard_navigation_intents() {
     assert!(matches!(
-        message_for_latin_key('J'),
+        message_for_latin_key('N'),
         Some(Message::KeyboardNavigateDown)
     ));
     assert!(matches!(
-        message_for_latin_key('K'),
+        message_for_latin_key('E'),
         Some(Message::KeyboardNavigateUp)
     ));
 }
