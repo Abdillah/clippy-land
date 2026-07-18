@@ -98,12 +98,12 @@ pub(super) fn should_ignore_clipboard_entry(entry: &str) -> bool {
         return true;
     }
 
-    if trimmed.chars().all(|c| {
-        c.is_ascii_digit() || matches!(c, ',' | '.' | ':' | ';' | '/' | '\\' | '_' | '-' | ' ')
-    }) && trimmed.chars().count() <= 8
-    {
-        return true;
-    }
+    // if trimmed.chars().all(|c| {
+    //     c.is_ascii_digit() || matches!(c, ',' | '.' | ':' | ';' | '/' | '\\' | '_' | '-' | ' ')
+    // }) && trimmed.chars().count() <= 8
+    // {
+    //     return true;
+    // }
 
     false
 }
